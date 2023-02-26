@@ -27,8 +27,8 @@ First we need to import POLR2A Chip-seq files -- a simple .bed file of peaks.
 
 # setting file path to peak files
 
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-path <- "CLASS_2023/CLASSES/03_Nextflow/00_Pol2_NF_CORE_RUN/results/bwa/mergedLibrary/macs/broadPeak"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152"
+path <- "CLASS_2023/CLASSES/03_Nextflow/chipseq/results/bwa/mergedLibrary/macs/broadPeak"
 
 # first we read the peak files in as gRanges object with rtracklayer function.
 peaks1 <- rtracklayer::import(file.path(basepath,path, "POLR2A_R1_peaks.broadPeak"))

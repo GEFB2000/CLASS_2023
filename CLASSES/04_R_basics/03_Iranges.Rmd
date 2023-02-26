@@ -158,7 +158,7 @@ ir3
 # we can also look a this with countOveralps to get more info
 # note that the counts of overlaps are recorded but not where!
 countOverlaps(ir1, ir2)
-ir3
+
 
 # order matters -- but can be figured out with just one countOverlaps
 countOverlaps(ir2, ir1)

@@ -89,8 +89,8 @@ I have some set up to test in the data folder.
 ```{R find overlaps}
 
 # setting file path to peak files
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-path <- "CLASS_2023/CLASSES/03_Nextflow/00_Pol2_NF_CORE_RUN/results/bwa/mergedLibrary/macs/broadPeak"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152"
+path <- "CLASS_2023/CLASSES/03_Nextflow/chipseq/results/bwa/mergedLibrary/macs/broadPeak"
 
 # first we read the peak files in as gRanges object with rtracklayer function.
 peaks1 <- rtracklayer::import(file.path(basepath,path, "POLR2A_R1_peaks.broadPeak"))
@@ -100,7 +100,7 @@ peaks2 <- rtracklayer::import(file.path(basepath,path, "POLR2A_R2_peaks.broadPea
 peaks1
 
 # for reference to last class looking at this file
-peaks_1_tsv <- read_tsv(file.path(basepath,path, "POLR2A_R1_peaks.broadPeak"), colnames = F)
+peaks_1_tsv <- read_tsv(file.path(basepath,path, "POLR2A_R1_peaks.broadPeak"), colnames = FALSE)
 
 # now we can use the findOverlaps function to see what overlaps!
 ?findOverlaps
