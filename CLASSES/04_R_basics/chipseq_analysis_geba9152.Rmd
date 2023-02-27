@@ -12,17 +12,318 @@ knitr::opts_chunk$set(echo = TRUE)
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(stringsAsFactors = F)
+library(GenomicRanges)
+library(tidyverse)
+library(IRanges)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{reading in file paths & loading genome features}
+# Setting file path to peak files
+
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+pathTBP <- "/results/bwa/mergedLibrary/macs/broadPeak/TBP"
+pathH3K36me3 <- "/results/bwa/mergedLibrary/macs/broadPeak/H3K36me3"
+
+# Reading in the peak files as gRanges objects with the rtracklayer function.
+
+# TBP
+TBP_R1 <- rtracklayer::import(file.path(basepath,pathTBP, "TBP_R1_peaks.broadPeak"))
+TBP_R2 <- rtracklayer::import(file.path(basepath,pathTBP, "TBP_R2_peaks.broadPeak"))
+
+# H3K36me3
+H3K36me3_R1 <- rtracklayer::import(file.path(basepath,pathH3K36me3, "H3K36me3_R1_peaks.broadPeak"))
+H3K36me3_R2 <- rtracklayer::import(file.path(basepath,pathH3K36me3, "H3K36me3_R2_peaks.broadPeak"))
+
+# Load Gencode-v32: for genome features.
+
+gencode_gr <- rtracklayer::import("/scratch/Shares/rinnclass/CLASS_2023/data/data/genomes/gencode.v32.annotation.gtf")
+```
+
+```{Total peaks}
+
+#TBP
+
+length(TBP_R1) 
+#22070 peaks
+length(TBP_R2) 
+#18302 peaks
+
+#H3K36me3
+
+length(H3K36me3_R1) 
+#173838 peaks
+length(H3K36me3_R2) 
+#175056 peaks
+
+```
+
+```{Making tsv files for samples}
+
+#pSer2 and pSer5, reading in file in tsv format
+
+TBP_R1_tsv <- read_tsv(file.path(basepath,pathTBP, "TBP_R1_peaks.broadPeak"), col_names = F)
+TBP_R2_tsv <- read_tsv(file.path(basepath,pathTBP, "TBP_R2_peaks.broadPeak"), col_names = F)
+
+H3K36me3_R1_tsv <- read_tsv(file.path(basepath,pathH3K36me3, "H3K36me3_R1_peaks.broadPeak"), col_names = F)
+H3K36me3_R2_tsv <- read_tsv(file.path(basepath,pathH3K36me3, "H3K36me3_R2_peaks.broadPeak"), col_names = F)
+
+#Renaming columns
+
+names(TBP_R1_tsv) <- c('chromosome', 'start', 'end', 'name', 'score', 'strand', 'signalValue', 'pValue', 'qValue')
+names(TBP_R2_tsv) <- c('chromosome', 'start', 'end', 'name', 'score', 'strand', 'signalValue', 'pValue', 'qValue')
+
+names(H3K36me3_R1_tsv) <- c('chromosome', 'start', 'end', 'name', 'score', 'strand', 'signalValue', 'pValue', 'qValue')
+names(H3K36me3_R2_tsv) <- c('chromosome', 'start', 'end', 'name', 'score', 'strand', 'signalValue', 'pValue', 'qValue')
+
+#Filtering to canonical chromosomes
+
+TBP_R1_tsv <- filter(TBP_R1_tsv, chromosome %in% c(paste0("chr", 1:22), "chrM", "chrX", "chrY"))
+TBP_R2_tsv <- filter(TBP_R2_tsv, chromosome %in% c(paste0("chr", 1:22), "chrM", "chrX", "chrY"))
+
+H3K36me3_R1_tsv <- filter(H3K36me3_R1_tsv, chromosome %in% c(paste0("chr", 1:22), "chrM", "chrX", "chrY"))
+H3K36me3_R2_tsv <- filter(H3K36me3_R2_tsv, chromosome %in% c(paste0("chr", 1:22), "chrM", "chrX", "chrY"))
+```
+
+```{Average peak width (mutate)}
+
+#Making a column containing the peak width
+
+TBP_R1_tsv <- TBP_R1_tsv %>% mutate(peak_width = end - start)
+TBP_R2_tsv <- TBP_R2_tsv %>% mutate(peak_width = end - start)
+
+H3K36me3_R1_tsv <- H3K36me3_R1_tsv %>% mutate(peak_width = end - start)
+H3K36me3_R2_tsv <- H3K36me3_R2_tsv %>% mutate(peak_width = end - start)
+
+#Median and max peak width
+
+summary(TBP_R1_tsv$peak_width) 
+#Median = 301, Max = 6843
+summary(TBP_R2_tsv$peak_width) 
+#Median = 292.0, Max = 6852.0
+
+summary(H3K36me3_R1_tsv$peak_width) 
+#Median = 371.0, Max = 18870.0
+summary(H3K36me3_R2_tsv$peak_width) 
+#Median = 363.0, Max = 43428.0
+
+table(table(TBP_R1_tsv))
+table(table(TBP_R2_tsv))
+
+table(table(H3K36me3_R1_tsv))
+table(table(H3K36me3_R2_tsv))
+```
+
+```{Histogram of peak width}
+
+#combining TBP replicates histograms
+
+h_TBP_R1 <- hist(TBP_R1_tsv$peak_width, breaks = 150, plot = FALSE)
+h_TBP_R2 <- hist(TBP_R2_tsv$peak_width, breaks = 150, plot = FALSE)
+
+plot(h_TBP_R1, xlim = c(0,1000), ylim = c(0,4000), xlab = "Peak Width", main = "TBP replicates peak width")
+plot(h_TBP_R2, xlim = c(0,1000), border = "red", add = TRUE)
+
+#combining H3K36me3 replicates histograms
+
+h_H3K36me3_R1 <- hist(H3K36me3_R1_tsv$peak_width, breaks = 200, plot = FALSE)
+h_H3K36me3_R2 <- hist(H3K36me3_R2_tsv$peak_width, breaks = 200, plot = FALSE)
+
+plot(h_H3K36me3_R1, xlim = c(0,3000), ylim = c(0,80000), xlab = "Peak Width", main = "H3K36me3 replicates peak width")
+plot(h_H3K36me3_R2, xlim = c(0,3000), border = "red", add = TRUE)
+```
+
+
+```{Promoters}
+
+# The promoters function will use the first base in a genebody at the TSS.
+
+# Promoter definition used: 1kb +/- from the TSS 
+gencode_promoters <- promoters(gencode_gr[gencode_gr$type == "gene"],
+                               upstream = 1e3, 
+                               downstream = 1e3)
+
+#Now we can have a variable that contains all of the promoters in the human genome
+
+length(gencode_promoters)
+length(gencode_gr[gencode_gr$type == "gene"])
+
+# There are 60,609 promoters in the $type == gene
+
+```
+
+```{SubsetByOverlaps}
+# Subset overlaps of all promoters compared to TBP_R1 & TBP_R2 data
+
+promoter_overlaps_TBP_R1 <- subsetByOverlaps(TBP_R1, gencode_promoters)
+promoter_overlaps_TBP_R2 <- subsetByOverlaps(TBP_R2, gencode_promoters)
+
+# Let's look at how many promoters contained the pSer2 phospho mark on Pol II
+
+length(promoter_overlaps_TBP_R1)
+#11860 promoters out of 60609 (TBP_R1 is found at 19.6% of promoters)
+length(promoter_overlaps_TBP_R2) 
+#9390 promoters out of 60609 (TBP_R2 is found at 15.5% of promoters)
+
+#On average, TBP was found at 17.6% of promoters
+
+# Subset overlaps of all promoters compared to HeK36me3_R1 & HeK36me3_R2 data
+
+promoter_overlaps_H3K36me3_R1 <- subsetByOverlaps(H3K36me3_R1, gencode_promoters)
+promoter_overlaps_H3K36me3_R2 <- subsetByOverlaps(H3K36me3_R2, gencode_promoters)
+
+# Let's look at how many promoters contained the pSer5 phospho mark on Pol II
+
+length(promoter_overlaps_HeK36me3_R1) 
+#7594 promoters out of 60609 (HeK36me3_R1 is found at 12.5% of promoters)
+length(promoter_overlaps_HeK36me3_R2) 
+#8043 promoters out of 60609 (HeK36me3_R2 is found at 13.3% of promoters)
+
+#On average, HeK36me3 was found at 12.9% of promoters
+
+
+# Overlapping the two overlaps by findOverlaps (TBP)
+
+subset_overlaps_promoter_TBP_peaks <- findOverlaps(promoter_overlaps_TBP_R1, promoter_overlaps_TBP_R2)
+
+length(subset_overlaps_promoter_TBP_peaks) 
+#8869 peaks at promoters, meaning, TBP_R1 and TBP_R2 were enriched at 8869 of the same promoters
+
+# Overlapping the two overlaps by findOverlaps (H3K36me3)
+
+subset_overlaps_promoter_H3K36me3_peaks <- findOverlaps(promoter_overlaps_HeK36me3_R1, promoter_overlaps_H3K36me3_R2)
+
+length(subset_overlaps_promoter_H3K36me3_peaks) 
+#5689 peaks at promoters, meaning, pSer2_R1 and pSer2_R2 were enriched at 5689 of the same promoters
+
+```
+
+
+```
+# On average, there were 10,625 TBP peaks at promoters, comparing replicates, there was an overlap of 8869 peaks. 
+# % overlaps of TBP = 83.4%
+
+# On average, there were 7,819 H3K36me3 peaks at promoters, comparing replicates, there was an overlap of 5689 peaks. 
+# % overlaps of H3K36me3 = 72.8%
+
+```
+
+
+```{How many unique peaks had overlaps}
+
+# @from: peaks from query file indexed into subject file
+# @to: peaks from subject file indexed into query file.
+
+#We can use length and unique to solve this (TBP): @to
+
+length(unique(subset_overlaps_promoter_TBP_peaks@to)) 
+#7507 unique peaks, that had 8869 overlaps between replicates (84.6% unique)
+
+length(unique(subset_overlaps_promoter_H3K36me3_peaks@to)) 
+#5081 unique peaks, that had 5689 overlaps between replicates (89.3%)
+
+
+# Looking at how many peak overlaps between replicates have unique values 
+
+table(table(subset_overlaps_promoter_TBP_peaks@from))
+
+# 1     2     3     
+# 7904  454   19    
+
+# 7904 + 2(454) + 3(19) = 8869
+
+table(table(subset_overlaps_promoter_TBP_peaks@to))
+
+# 1     2     
+# 8567  151   
+
+# 8567 + 2(151) = 8869 overlaps
+
+table(table(subset_overlaps_promoter_H3K36me3_peaks@from))
+
+# 1     2    3   5        
+# 4777 407  31   1    
+
+# 4777 + 2(407) + 3(31) + 5(1) = 5689 overlaps 
+
+table(table(subset_overlaps_promoter_H3K36me3_peaks@to))
+
+# 1     2     3    4   5         
+# 4537 488   49    6   1  
+
+# 4537 + 2(488) + 3(49) + 4(6) + 5(1) = 5689 overlaps
+
+```
+```{Peak overlaps and promoter overlaps}
+# A consensus peak is a peak occurring in at least 2 replicates of the given replicates and it must pass the significance cutoff
+# Percentage of consensus peaks that overlap promoters?
+
+TBP_consensus_peaks <- subsetByOverlaps(TBP_R1, TBP_R2)
+length(TBP_consensus_peaks)
+# Consensus peaks: 14250
+# TBP_R1 total peaks: 22070 peaks
+# TBP_R2 total peaks: 18302 peaks
+
+H3K36me3_consensus_peaks <- subsetByOverlaps(H3K36me3_R1, H3K36me3_R2)
+length(H3K36me3_consensus_peaks)
+# Consensus peaks: 117749
+# H3K36me3 total peaks: 173838 peaks
+# H3K36me3 total peaks: 175056 peaks
+
+# Consensus peaks that overlap with promoters between replicates
+
+TBP_consensus_peaks_ov_promoters <- subsetByOverlaps(TBP_consensus_peaks, gencode_promoters)
+length(TBP_consensus_peaks_ov_promoters)
+# 8464 
+# Previously: 8869 promoter overlaps between replicates 
+
+
+H3K36me3_consensus_peaks_ov_promoters <- subsetByOverlaps(H3K36me3_consensus_peaks, gencode_promoters)
+length(H3K36me3_consensus_peaks_ov_promoters)
+# 5464
+# Previously: 5689 promoter overlaps between replicates 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
