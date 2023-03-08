@@ -1,6 +1,7 @@
 ---
 title: "chipseq_TBP_H3K36me3"
 output: html_document
+author: "Georgia Barone"
 ---
 
 ```{r setup, include=FALSE}

@@ -14,7 +14,7 @@ library(GenomicRanges)
 library(tidyverse)
 library(IRanges)
 # library(Gviz)
-# source("../../util/my_class_functions.R")
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/test_class_function.R")
 ```
 Accompanying Youtube video:
 https://youtu.be/56ZI6htKFns
@@ -102,8 +102,8 @@ This is a very common first step and now we can automate it with some functions!
 
 # First let's set a file path to where all our peak files are.
 # This is very helpful in the long run to not have huge filepaths everywhere :)
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/JR"
-peak_path <- "CLASS_2023/CLASSES/03_Nextflow/00_my_chipseq/results/bwa/mergedLibrary/macs/broadPeak"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+peak_path <- "results/bwa/mergedLibrary/macs/broadPeak"
 broadpeakfilepath <- file.path(basepath, peak_path)
 
 
@@ -118,7 +118,7 @@ fl
 
 # This gives us an index 1:n where each peak file path is a character vector.
 # let's try this to grab just one protein (can be the one from your group)
-fl_ep300 <- fl[grep("EP300", fl)]
+fl_TBP <- fl[grep("TBP", fl)]
 
 # cool now we can subset this to any protein of our choosing
 
@@ -230,6 +230,8 @@ import_peaks <- function(consensus_file_path = broadpeakfilepath) {
     
     })
   
+}
+  
 # NOW FOR LOOP TO IMPORT FILES
 # setting an empty list "peak_list" to be filled by for loop
   peak_list <- c()
@@ -244,7 +246,6 @@ import_peaks <- function(consensus_file_path = broadpeakfilepath) {
     names(peak_list)[length(peak_list)] <- dbp_name[i]
   }
   return(peak_list)
-}
 
 # what happened? Nothing ? Why ?
 
@@ -270,10 +271,10 @@ my_peaks <- import_peaks(consensus_file_path = broadpeakfilepath)
 library(GenomicRanges)
 library(tidyverse)
 library(IRanges)
-source("../../util/your-functions.R")
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/test_functions.R")
 
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-peak_path <- "CLASS_2023/CLASSES/03_Nextflow/00_my_chipseq/results/bwa/mergedLibrary/macs/broadPeak/"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+peak_path <- "results/bwa/mergedLibrary/macs/broadPeak/"
 broadpeakfilepath <- file.path(basepath, peak_path)
 
 my_peaks <- import_peaks(consensus_file_path = broadpeakfilepath)
