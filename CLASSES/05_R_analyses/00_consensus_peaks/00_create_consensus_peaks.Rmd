@@ -13,11 +13,11 @@ options(stringsAsFactors = F)
 library(GenomicRanges)
 library(tidyverse)
 library(IRanges)
-source("../../../util/my_class_functions.R")
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/bchm_functions.R")
 
 # filepath to import peaks
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-peak_path <- "CLASS_2023/CLASSES/03_Nextflow/00_my_chipseq/results/bwa/mergedLibrary/macs/broadPeak/"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+peak_path <- "results/bwa/mergedLibrary/macs/broadPeak_good_files/"
 broadpeakfilepath <- file.path(basepath, peak_path)
 ```
 Acompanying youtube video:
@@ -52,6 +52,9 @@ peak_num <- peak_num %>%
   separate(col = dbp,  into = c('dbp', 'replicate'), sep = "_")
   # peak_num <- separate(peak_num, col = dbp,  into = c('dbp', 'replicate'), sep = "_")
 
+# set working directory
+setwd("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks")
+
 # let's save this for our records 
 write_csv(peak_num, "results/num_peaks_df.csv")
 
@@ -61,7 +64,7 @@ write_csv(peak_num, "results/num_peaks_df.csv")
 # STEP2: create consensus peaks
 ```{r create consensus peaks}
 # first we need a list of unique dbps as input parameter
-dbp <- c("EP300", ...)
+#dbp <- c("EP300", ...)
 # works but real pain for 480 dbps later :)
 
 # or use our handy previous code 
@@ -98,40 +101,22 @@ Let's use "analysis/00_consensus_peaks/
 
 ```{r exporting consensus peaks }
 # setting file path to export
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-consensus_path <- "CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/"
-exportpath <- file.path(basepath, consensus_path)
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+consensus_path <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/"
+exportpath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/consensus_peaks/"
+#exportpath <- file.path(basepath, consensus_path)
 
 # /scratch/Shares/rinnclass/CLASS_2023/JR/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/consensus_peaks
 
 # now we can export each as .bed file
 for(i in 1:length(consensus_list)) {
 rtracklayer::export(consensus_list[[i]], paste0(exportpath, names(consensus_list)[i], "_consensus_peaks.bed") )}
-
-# alternative local export:
-for(i in 1:length(consensus_list)) {
-rtracklayer::export(consensus_list[[i]], paste0("results/consensus_peaks/", names(consensus_list)[i],"_consensus_peaks.bed")) }
-
 ```
 
-
-# STEP 4 : format .bed files in general and add header needed for UCSC.
-Now let's read in one of these files and see what we see:
-
-```{r reading .bed file from rtracklayer_export}
-# read in a given peak file 
-peak_1 <- read_tsv("EP300_consensus_peaks.bed", col_names = F)
-
-# ok we can see that rtracklayer did not keep qvalue sigvalue etc
-# we also see the odd contings etc.
-# let's clean this up with lapply:
-```
-
-# STEP4_2 : cleaning up .bed file basics adding col names
-Rtracklayer export does not keep the col names :( 
+# STEP 4 : cleaning up .bed file basics adding col names
 ```{r reading .bed file from rtracklayer_export}
 # FIRST a file list:
-consensus_file_list <- list.files("/scratch/Shares/rinnclass/CLASS_2023/JR/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks", full.names = T, pattern = ".bed")
+consensus_file_list <- list.files("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks", full.names = T, pattern = ".bed")
 
 # lapply (for loop) across consensus file list to add colnames
 # The actual col names for .broadPeak are: chr, start, end, name, score, strand
@@ -231,14 +216,14 @@ Solution
 
 
 
-basepath <- "/scratch/Shares/rinnclass/CLASS_2023/<your_folder>"
-consensus_peak_path <- "CLASS_2023/CLASSES/05_R_analyses/analysis/00_consensus_peaks"
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152"
+consensus_peak_path <- "CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks"
 
 # input into function
-consensusFilePath <- file.path(basepath, consensus_peak_path)
+consensusFilePath <- '/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/consensus_peaks'
 
 # input into function
-exportpath <- "analysis/00_consensus_peaks/test"
+exportpath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/00_consensus_peaks/test"
 
 
 
@@ -260,7 +245,7 @@ canonical_chr <- c(paste0("chr", 1:22), "chrM", "chrX", "chrY")
 peaks <- lapply(peaks, function(x) x %>% filter(chr %in% canonical_chr))
 
 headers <- paste0("track type=bedGraph name=", names(peaks))
-new_filenames <- paste0("analysis/00_consensus_peaks/test/", names(peaks), ".bed")
+new_filenames <- paste0("test/", names(peaks), ".bed")
 
 for(i in 1:length(peaks)) {
   # Write the header line
@@ -280,6 +265,33 @@ ucsc_formating(consensusFilePath = consensusFilePath, export_path = export_path)
   
 
 
+```
+
+``````{r KURTS CODE FOR HELP}
+ucsc_formating <- function(consensusFilePath = consensusFilePath, export_path = export_path) {
+consensus_file_list <- list.files(consensusFilePath, full.names = T, pattern = ".bed")
+dbps <- sapply(consensus_file_list, function(x) {
+y <- str_extract(x, "([^\\/]+$)")
+unlist(strsplit(y, "_"))[1]})
+peaks <- lapply(consensus_file_list, read.table, col.names = c("chr", "start", "end", "name", "score", "strand"))
+names(peaks) <- dbps
+print(length(peaks))
+canonical_chr <- c(paste0("chr", 1:22), "chrM", "chrX", "chrY")
+peaks <- lapply(peaks, function(x) x %>% filter(chr %in% canonical_chr))
+headers <- paste0("track type=bedGraph name=", names(peaks))
+new_filenames <- paste0(export_path, "/", names(peaks), ".bed")
+for(i in 1:length(peaks)) {
+  # Write the header line
+  writeLines(headers[[i]], new_filenames[[i]])
+  # Append the broadPeak table data
+  write.table(peaks[[i]], new_filenames[[i]],
+              sep = "\t", col.names = FALSE, row.names = FALSE,
+              quote = FALSE, append = TRUE)
+}
+  return(c("done?"))
+}
+
+ucsc_formating(consensusFilePath = consensusFilePath, export_path = export_path)
 ```
 
 

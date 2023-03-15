@@ -13,7 +13,7 @@ options(stringsAsFactors = F)
 library(GenomicRanges)
 library(tidyverse)
 library(IRanges)
-source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/test_functions.R")
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/bchm_functions.R")
 # setting file paths
 
 basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
