@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 options(stringsAsFactors = F)
 
 library(ggplot2)
-library(ggpubr)
+# library(ggpubr)
 library(tidyverse)
 
 source("../../../util/plotting_functions.R")
@@ -143,6 +143,7 @@ ggplot(big_num_peaks_df, aes(x = num_peaks,
 
 # nice we see three plots, one for each category.
 # We have a result: All categories have linear relationship
+# facet function - one plot for each unique feature in a column
   
 ```
 
