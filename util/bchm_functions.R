@@ -39,3 +39,26 @@ consensus_from_reduced <- function(dbp, peak_list) {
   # Required only two replicates == dbp_consensus <- all_peaks[rowSums(peak_exists) > 1]
   return(dbp_consensus)
 }
+
+ucsc_formating <- function(consensusFilePath = consensusFilePath, export_path = export_path) {
+  consensus_file_list <- list.files(consensusFilePath, full.names = T, pattern = ".bed")
+  dbps <- sapply(consensus_file_list, function(x) {
+    y <- str_extract(x, "([^\\/]+$)")
+    unlist(strsplit(y, "_"))[1]})
+  peaks <- lapply(consensus_file_list, read.table, col.names = c("chr", "start", "end", "name", "score", "strand"))
+  names(peaks) <- dbps
+  print(length(peaks))
+  canonical_chr <- c(paste0("chr", 1:22), "chrM", "chrX", "chrY")
+  peaks <- lapply(peaks, function(x) x %>% filter(chr %in% canonical_chr))
+  headers <- paste0("track type=bedGraph name=", names(peaks))
+  new_filenames <- paste0(export_path, "/", names(peaks), ".bed")
+  for(i in 1:length(peaks)) {
+    # Write the header line
+    writeLines(headers[[i]], new_filenames[[i]])
+    # Append the broadPeak table data
+    write.table(peaks[[i]], new_filenames[[i]],
+                sep = "\t", col.names = FALSE, row.names = FALSE,
+                quote = FALSE, append = TRUE)
+  }
+  return(c("done?"))
+}

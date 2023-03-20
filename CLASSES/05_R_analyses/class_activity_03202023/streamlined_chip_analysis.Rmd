@@ -1,0 +1,217 @@
+---
+title: "Class_exercise"
+author: "Georgia Barone"
+date: "3/16/2023"
+output: github_document
+---
+
+
+# Load the libraries you need
+# Load functions you need "my_class_functions"
+```{r setup, include=FALSE}
+# packages & functions needed
+knitr::opts_chunk$set(echo = TRUE)
+library(GenomicRanges)
+library(tidyverse)
+library(IRanges)
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/bchm_functions.R")
+source("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/util/my_class_functions.R")
+
+# file paths
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/chipseqprofs"
+peak_path <- "results/bwa/mergedLibrary/macs/broadPeak_good_files/"
+broadpeakfilepath <- file.path(basepath, peak_path)
+```
+
+
+# load in your peak files for each replicate of each protein
+# Here I am starting to analyze my data for my proteins of interest:
+# proteinX, Y, Z .....
+# First I will read in each replicate file
+```{r load in peak files}
+# import peaks
+peak_list <- import_peaks(consensus_file_path = broadpeakfilepath)
+
+# printing out a table of the number of peaks in each file:
+peak_num <- sapply(peak_list, length) %>% as.data.frame(row.names = T)
+# label column
+names(peak_num) <- c("num_peaks")
+
+# make dbp name a col.
+peak_num <- peak_num %>%
+  rownames_to_column(var = "dbp") %>%
+  separate(col = dbp,  into = c('dbp', 'replicate'), sep = "_")
+
+# set working directory
+setwd("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/class_activity_03202023")
+
+# saving to results folder
+write_csv(peak_num, "results/num_peaks_df.csv")
+```
+
+# Now I am going to create consensus peaks for each protein
+```{r consensus peaks}
+# creating a list of unique dpbs 
+dbps <- unique(sapply(names(peak_list), function(x) {
+   unlist(strsplit(x, "_"))[1]
+}))
+
+# run function consensus_from_reduced
+consensus_list <- lapply(dbps, consensus_from_reduced, peak_list)
+names(consensus_list) <- dbps
+
+# num_peaks for consensus 
+num_consensus_peaks <- sapply(consensus_list, length) %>% 
+  as.data.frame() %>%
+  rownames_to_column( var = "dbp") %>%
+  dplyr::rename(number_consensus_peaks = ".")
+
+# merge into num_peaks
+peak_num <- left_join(peak_num, num_consensus_peaks)
+
+# export consensus peaks to results folder
+write_csv(peak_num, "results/num_peaks_df.csv")
+
+# setting file path to export
+basepath <- "/scratch/Shares/rinnclass/CLASS_2023/geba9152"
+consensus_path <- "CLASS_2023/CLASSES/05_R_analyses/class_activity_03202023/consensus_peaks/"
+exportpath <- file.path(basepath, consensus_path)
+
+# export consensus_list as multiple .bed files
+for(i in 1:length(consensus_list)) {
+rtracklayer::export(consensus_list[[i]], paste0(exportpath, names(consensus_list)[i], "_consensus_peaks.bed") )}
+
+# cleaning up .bed files
+
+# making list of consensus .bed files
+consensus_file_list <- list.files("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/class_activity_03202023/consensus_peaks", full.names = T, pattern = ".bed")
+
+# lapply (for loop) across consensus file list to add colnames
+# col names for .broadPeak are: chr, start, end, name, score, strand
+peaks <- lapply(consensus_file_list, read.table, col.names = c("chr", "start", "end", "name", "score", "strand"))
+
+# adding dpbs as names for the peaks file
+names(peaks) <- dbps
+
+# remove contigs from peak files
+# make chromosomes of interest object
+canonical_chr <- c(paste0("chr", 1:22), "chrM", "chrX", "chrY")
+
+# use lapply with filter function to cannonical_chr
+peaks <- lapply(peaks, function(x) x %>% filter(chr %in% canonical_chr))
+
+
+# export new files without contigs
+new_filenames <- paste0("consensus_peaks/", names(peaks), "_consensus.bed")
+
+for(i in 1:length(peaks)) {
+  write.table(peaks[[i]], new_filenames[[i]],
+              sep = "\t", col.names = FALSE, row.names = FALSE,
+              quote = FALSE, append = TRUE)
+}
+```
+
+# Now I am going to make my consensus peaks compatable with UCSC genome browser
+```{r}
+# adding a header to make compatible with UCSC 
+# using paste0 to print the header text & then adding the names as the value the header equals with 'names' function
+headers <- paste0("track type=bedGraph name=", names(peaks))
+
+# create a path to export after we add header (using the loop below)
+new_filenames <- paste0("ucsc_consensus_peaks/", names(peaks), ".bed")
+
+# write new ucsc .bed files to ucsc file path using loop below
+for(i in 1:length(peaks)) {
+  # Write the header line
+  writeLines(headers[[i]], new_filenames[[i]])
+  # Append the broadPeak table data
+  
+  write.table(peaks[[i]], new_filenames[[i]],
+              sep = "\t", col.names = FALSE, row.names = FALSE,
+              quote = FALSE, append = TRUE)
+}
+```
+
+# I am curious if my proteins are transcription factors so I will use the annotations
+# in a cell paper I found and see
+
+```{r}
+# if you leave the object name you just created in the environment
+# it will print out in the knit. For example :
+objectname
+```
+
+
+
+
+# Now I want to compare a protein with a previous analysis 
+```{r}
+# goto UCSC genome browser and load in a peak file for a given protein
+# load in the data for the same protein from the previous analysis
+# compare how your consensus peaks are similar or different to previous analyses
+```
+
+
+# Now I am going to determine how my peaks for each protein overlap annotations of the genome
+# First I will find the overlaps between my consensus peaks with promoters of lncRNA and mRNA promoters
+
+```{r}
+# find overlaps of promoters for each protein
+```
+
+## results: 
+#1) What can you determine from these overlaps?
+
+
+
+# Now I want to compare the overlaps with lncRNA and mRNA promoters seperately 
+```{r}
+```
+## results:
+# 1) What is the difference in overlaps between mRNA and lncRNA promoters
+
+
+# Now I am going to test if there is more binding over gene bodies than promoters
+# I will seperate lncRNA and mRNA gene bodies to find the overlaps 
+
+```{r}
+```
+## results: 
+# 1) Do my proteins have more overlaps with promoters or genebodies?
+
+
+
+# It is nice and all to find overlaps, but I am interested in how many proteins
+# bind a specific promoter. I will use my handy "occurence" parameter in 
+# " count peaks per feature" 
+
+```{r}
+```
+## results: I find the max number of proteins on a promoter to be X
+
+
+# Now I want to start plotting my results
+# First I will see if there is a realtionship between peak number and total DNA covered
+```{r}
+ggplot ()
+```
+
+# Now I want to color my plot by wether the protein is a TF or not.
+```{r}
+ggplot
+```
+
+# I want to make a histogram of the number of peaks for each of my proteins
+
+```{r}
+hist
+```
+
+
+# Now I want to facet this by the type of DNA binding domain my protein has.
+```{r}
+```
+
+
+# Cool now I am ready to send my result to my collaborator as a
+# Knitted document
