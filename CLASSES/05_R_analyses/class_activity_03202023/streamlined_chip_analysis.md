@@ -172,28 +172,28 @@ num_peaks_df$peaks_overlapping_promoters <- rowSums(promoter_peak_counts)
 num_peaks_df_for_analysis <- num_peaks_df %>% filter(!row_number() %in% c(2,3,5,6,8,9,11,12,14,15,17,18,20,21,23,24))
 
 # adding % columns for all promoters
-num_peaks_df_for_analysis$percent_peaks_overlap_promoters <- (num_peaks_df_for_analysis$peaks_overlapping_promoters/num_peaks_df_for_analysis$num_peaks)*100
+num_peaks_df_for_analysis$percent_peaks_overlap_promoters <- (num_peaks_df_for_analysis$peaks_overlapping_promoters/36814)*100
 ```
 
 ## results:
 
 \#1) What can you determine from these overlaps?
 
-### BRCA1 peak overlaps with promoters: 14420, 10.6% of all lncRNA & mRNA promoters
+### BRCA1 peak overlaps with promoters: 14420, 39.16% of all promoters
 
-### H3K36me3 peak overlaps with promoters: 2179, 0.65% of all lncRNA & mRNA promoters
+### H3K36me3 peak overlaps with promoters: 2179, 5.92% of all promoters
 
-### JUN peak overlaps with promoters: 700, 3.65% of all lncRNA & mRNA promoters
+### JUN peak overlaps with promoters: 700, 1.90% of all promoters
 
-### MAX peak overlaps with promoters: 18524, 17.06% of all lncRNA & mRNA promoters
+### MAX peak overlaps with promoters: 18524, 50.32% of all promoters
 
-### POL2RA peak overlaps with promoters: 5102, 21.71% of all lncRNA & mRNA promoters
+### POL2RA peak overlaps with promoters: 5102, 13.86% of all promoters
 
-### POL2RA phosphoS2 peak overlaps with promoters: 8411, 4.40% of all lncRNA & mRNA promoters
+### POL2RA phosphoS2 peak overlaps with promoters: 8411, 22.85% of all promoters
 
-### POL2RA phosphoS5 peak overlaps with promoters: 17143, 6.98% of all lncRNA & mRNA promoters
+### POL2RA phosphoS5 peak overlaps with promoters: 17143, 46.57% of all promoters
 
-### TBP peak overlaps with promoters: 8480, 20.46% of all lncRNA & mRNA promoters
+### TBP peak overlaps with promoters: 8480, 23.03% of all promoters
 
 ### Note\*\*\* percentages obtained above are from dividing peaks at promoters by total peaks
 
