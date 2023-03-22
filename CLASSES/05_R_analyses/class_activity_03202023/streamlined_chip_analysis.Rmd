@@ -5,9 +5,7 @@ date: "3/16/2023"
 output: github_document
 ---
 
-
-# Load the libraries you need
-# Load functions you need "my_class_functions"
+# Loading in the libraries needed for analysis
 ```{r setup, include=FALSE}
 # packages & functions needed
 knitr::opts_chunk$set(echo = TRUE)
@@ -23,10 +21,8 @@ peak_path <- "results/bwa/mergedLibrary/macs/broadPeak_good_files/"
 broadpeakfilepath <- file.path(basepath, peak_path)
 ```
 
-
-# load in your peak files for each replicate of each protein
 # Here I am starting to analyze my data for my proteins of interest:
-# proteinX, Y, Z .....
+# BCRA1, H3K36me3, MAX, JUN, POLR2A, POLR2A phospho S2, POLR2A phospho S5, & TBP
 # First I will read in each replicate file
 ```{r load in peak files}
 # import peaks
@@ -112,10 +108,10 @@ for(i in 1:length(peaks)) {
 ```
 
 # Now I am going to make my consensus peaks compatable with UCSC genome browser
-```{r}
+```{r UCSC compatability}
 # adding a header to make compatible with UCSC 
 # using paste0 to print the header text & then adding the names as the value the header equals with 'names' function
-headers <- paste0("track type=bedGraph name=", names(peaks))
+headers <- paste0("track type=bed name=", names(peaks))
 
 # create a path to export after we add header (using the loop below)
 new_filenames <- paste0("ucsc_consensus_peaks/", names(peaks), ".bed")
@@ -133,15 +129,19 @@ for(i in 1:length(peaks)) {
 ```
 
 # Now I want to compare a protein with a previous analysis 
+## Here my TBP consensus peak (from code above) overlayed with the Spring 2021 TBP chip data
+## Shown in the JPG below are two consensus peaks called from my code, that align with the Spring 2021 data
 ```{r downloading in ucsc data}
 # goto UCSC genome browser and load in a peak file for a given protein
 # load in the data for the same protein from the previous analysis
 # compare how your consensus peaks are similar or different to previous analyses
+
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/class_activity_03202023/TBP_genomebrowser.jpg") 
+
 ```
 
 # Now I am going to determine how my peaks for each protein overlap annotations of the genome
 # First I will find the overlaps between my consensus peaks with promoters of lncRNA and mRNA promoters
-
 ```{r overlap between consensus peaks with promoters of lncRNA and mRNA}
 # find overlaps of promoters for each protein
 # filepath to import peaks
@@ -178,16 +178,16 @@ num_peaks_df_for_analysis$percent_peaks_overlap_promoters <- (num_peaks_df_for_a
 ## results: 
 #1) What can you determine from these overlaps?
 
-BRCA1 peak overlaps with promoters: 14420, 10.6% of all promoters
-H3K36me3 peak overlaps with promoters: 2179, 0.65% of all promoters
-JUN peak overlaps with promoters: 700, 3.65% of all promoters
-MAX peak overlaps with promoters: 18524, 17.06% of all promoters
-POL2RA peak overlaps with promoters: 5102, 21.71% of all promoters
-POL2RA phosphoS2 peak overlaps with promoters: 8411, 4.40% of all promoters
-POL2RA phosphoS5 peak overlaps with promoters: 17143, 6.98% of all promoters
-TBP peak overlaps with promoters: 8480, 20.46% of all promoters
+### BRCA1 peak overlaps with promoters: 14420, 10.6% of all lncRNA & mRNA promoters
+### H3K36me3 peak overlaps with promoters: 2179, 0.65% of all lncRNA & mRNA promoters
+### JUN peak overlaps with promoters: 700, 3.65% of all lncRNA & mRNA promoters
+### MAX peak overlaps with promoters: 18524, 17.06% of all lncRNA & mRNA promoters
+### POL2RA peak overlaps with promoters: 5102, 21.71% of all lncRNA & mRNA promoters
+### POL2RA phosphoS2 peak overlaps with promoters: 8411, 4.40% of all lncRNA & mRNA promoters
+### POL2RA phosphoS5 peak overlaps with promoters: 17143, 6.98% of all lncRNA & mRNA promoters
+### TBP peak overlaps with promoters: 8480, 20.46% of all lncRNA & mRNA promoters
 
-# possible extra analysis - divide these values by the total peaks, to get fraction of peaks that are at promoters
+### Note*** percentages obtained above are from dividing peaks at promoters by total peaks
 
 # Now I want to compare the overlaps with lncRNA and mRNA promoters seperately 
 ```{r breaking up lncrna & mrna promoters}
@@ -212,30 +212,32 @@ num_peaks_df_for_analysis$percent_lncRNApeaks_overlap_promoters <- (num_peaks_df
 num_peaks_mRNA_lncRNA <- num_peaks_df_for_analysis[c(1,13,14,15)]
 ```
 ## results:
-# 1) What is the difference in overlaps between mRNA and lncRNA promoters
+#1) What is the difference in overlaps between mRNA and lncRNA promoters
 
 # mRNA promoters
-BRCA1 peak overlaps with mRNA promoters: 11032, 8.13% of all mRNA promoters
-H3K36me3 peak overlaps with mRNA promoters: 618, 0.18% of all mRNA promoters
-JUN peak overlaps with mRNA promoters: 469, 2.45% of all mRNA promoters
-MAX peak overlaps with mRNA promoters: 13353, 12.3% of all mRNA promoters
-POL2RA peak overlaps with mRNA promoters: 3854, 16.4% of all mRNA promoters
-POL2RA phosphoS2 peak overlaps with mRNA promoters: 57493, 3% of all mRNA promoters
-POL2RA phosphoS5 peak overlaps with mRNA promoters: 12730, 5.17% of all mRNA promoters
-TBP peak overlaps with mRNA promoters: 6724, 16.23% of all mRNA promoters
+### BRCA1 peak overlaps with mRNA promoters: 11032, 8.13% of all mRNA promoters
+### H3K36me3 peak overlaps with mRNA promoters: 618, 0.18% of all mRNA promoters
+### JUN peak overlaps with mRNA promoters: 469, 2.45% of all mRNA promoters
+### MAX peak overlaps with mRNA promoters: 13353, 12.3% of all mRNA promoters
+### POL2RA peak overlaps with mRNA promoters: 3854, 16.4% of all mRNA promoters
+### POL2RA phosphoS2 peak overlaps with mRNA promoters: 57493, 3% of all mRNA promoters
+### POL2RA phosphoS5 peak overlaps with mRNA promoters: 12730, 5.17% of all mRNA promoters
+### TBP peak overlaps with mRNA promoters: 6724, 16.23% of all mRNA promoters
 
 # lncRNA promoters
-BRCA1 peak overlaps with lncRNA promoters: 3388, 2.5% of all lncRNA promoters
-H3K36me3 peak overlaps with lncRNA promoters: 1561, 0.47% of all lncRNA promoters
-JUN peak overlaps with lncRNA promoters: 231, 1.2% of all lncRNA promoters
-MAX peak overlaps with lncRNA promoters: 5171, 4.76% of all lncRNA promoters
-POL2RA peak overlaps with lncRNA promoters: 1248, 5.31% of all lncRNA promoters
-POL2RA phosphoS2 peak overlaps with lncRNA promoters: 2662, 1.14% of all lncRNA promoters
-POL2RA phosphoS5 peak overlaps with lncRNA promoters: 4413, 1.8% of all lncRNA promoters
-TBP peak overlaps with lncrna promoters: 1756, 4.24% of all lncRNA promoters
+### BRCA1 peak overlaps with lncRNA promoters: 3388, 2.5% of all lncRNA promoters
+### H3K36me3 peak overlaps with lncRNA promoters: 1561, 0.47% of all lncRNA promoters
+### JUN peak overlaps with lncRNA promoters: 231, 1.2% of all lncRNA promoters
+### MAX peak overlaps with lncRNA promoters: 5171, 4.76% of all lncRNA promoters
+### POL2RA peak overlaps with lncRNA promoters: 1248, 5.31% of all lncRNA promoters
+### POL2RA phosphoS2 peak overlaps with lncRNA promoters: 2662, 1.14% of all lncRNA promoters
+### POL2RA phosphoS5 peak overlaps with lncRNA promoters: 4413, 1.8% of all lncRNA promoters
+### TBP peak overlaps with lncrna promoters: 1756, 4.24% of all lncRNA promoters
+
+### Note*** percentages obtained above are from dividing peaks at promoters by total peaks
 
 # Proteins seem to have fewer peaks in lncRNA promoters compared to mRNA promoters
-# This makes sense because mRNA produce proteins
+# This makes sense because mRNA transcripts produce proteins
 
 # Now I am going to test if there is more binding over gene bodies than promoters
 # I will seperate lncRNA and mRNA gene bodies to find the overlaps 
@@ -279,68 +281,71 @@ num_peaks_mRNA_lncRNA <- num_peaks_df_for_analysis[c(1,9,16,17,18)]
 # 1) Do my proteins have more overlaps with promoters or genebodies?
 
 # all gene body overlaps
-BCRA1: 26993, 19.88% of all gene bodies
-H3K36me3: 76443, 22.81% of all gene bodies
-JUN: 3328, 17.36% of all gene bodies
-MAX: 60723, 55.95% of all gene bodies
-POL2RA: 7087, 30.16% of all gene bodies
-POL2RA phosphoS2: 42324, 22.15 of all gene bodies
-POL2RA phosphoS5: 53738, 21.87% of all gene bodies
-TBP: 11110, 26.81% of all gene bodies
+### BCRA1: 26993, 19.88% of all gene bodies
+### H3K36me3: 76443, 22.81% of all gene bodies
+### JUN: 3328, 17.36% of all gene bodies
+### MAX: 60723, 55.95% of all gene bodies
+### POL2RA: 7087, 30.16% of all gene bodies
+### POL2RA phosphoS2: 42324, 22.15 of all gene bodies
+### POL2RA phosphoS5: 53738, 21.87% of all gene bodies
+### TBP: 11110, 26.81% of all gene bodies
 
 # mRNA
-BCRA1 promoter overlaps (from above): 11032, 8.13% of all mRNA promoters
-BCRA1 gene body overlaps: 21406, 15.77% of mRNA gene bodies
-# BCRA1 contains more gene body overlaps than promoter overlaps
-H3K36me3 promoter overlaps: 618, 0.18% of all mRNA promoters
-H3K36me3 gene body overlaps: 70974, 21.19% of mRNA gene bodies
-# H3K36me3 contains more gene body overlaps than promoter overlaps
-JUN promoter overlaps: 2.45% of all mRNA promoters
-JUN gene body overlaps: 2486, 12.96% of mRNA gene bodies
-# JUN contains more gene body overlaps than promoter overlaps
-MAX promoter overlaps: 12.3% of all mRNA promoters
-MAX gene body overlaps: 47064, 43.37% of mRNA gene bodies
-# MAX contains more gene body overlaps than promoter overlaps
-POL2RA promoter overlaps: 16.4% of all mRNA promoters
-POL2RA gene body overlaps: 5656, 24.07% of mRNA gene bodies
-# POL2RA contains more gene body overlaps than promoter overlaps
-POL2RA phosphoS2 promoter overlaps: 3% of all mRNA promoters
-POL2RA phosphoS2 gene body overlaps: 37283, 19.51% of mRNA gene bodies
-# POL2RA phosphoS2 contains more gene body overlaps than promoter overlaps
-POL2RA phosphoS5 promoter overlaps: 5.17% of all mRNA promoters
-POL2RA phosphoS5 gene body overlaps: 45575, 18.54% of mRNA gene bodies
-# POL2RA phosphoS5 contains more gene body overlaps than promoter overlaps
-TBP promoter overlaps: 16.23% of all mRNA promoters
-TBP gene body overlaps: 9040, 21.81% of mRNA gene bodies
-# TBP contains more gene body overlaps than promoter overlaps
+### BCRA1 promoter overlaps (from above): 11032, 8.13% of all mRNA promoters
+### BCRA1 gene body overlaps: 21406, 15.77% of mRNA gene bodies
+## BCRA1 contains more gene body overlaps than promoter overlaps
+### H3K36me3 promoter overlaps: 618, 0.18% of all mRNA promoters
+### H3K36me3 gene body overlaps: 70974, 21.19% of mRNA gene bodies
+## H3K36me3 contains more gene body overlaps than promoter overlaps
+### JUN promoter overlaps: 2.45% of all mRNA promoters
+### JUN gene body overlaps: 2486, 12.96% of mRNA gene bodies
+## JUN contains more gene body overlaps than promoter overlaps
+### MAX promoter overlaps: 12.3% of all mRNA promoters
+### MAX gene body overlaps: 47064, 43.37% of mRNA gene bodies
+## MAX contains more gene body overlaps than promoter overlaps
+### POL2RA promoter overlaps: 16.4% of all mRNA promoters
+### POL2RA gene body overlaps: 5656, 24.07% of mRNA gene bodies
+## POL2RA contains more gene body overlaps than promoter overlaps
+### POL2RA phosphoS2 promoter overlaps: 3% of all mRNA promoters
+### POL2RA phosphoS2 gene body overlaps: 37283, 19.51% of mRNA gene bodies
+## POL2RA phosphoS2 contains more gene body overlaps than promoter overlaps
+### POL2RA phosphoS5 promoter overlaps: 5.17% of all mRNA promoters
+### POL2RA phosphoS5 gene body overlaps: 45575, 18.54% of mRNA gene bodies
+## POL2RA phosphoS5 contains more gene body overlaps than promoter overlaps
+### TBP promoter overlaps: 16.23% of all mRNA promoters
+### TBP gene body overlaps: 9040, 21.81% of mRNA gene bodies
+## TBP contains more gene body overlaps than promoter overlaps
 
 # lncRNA 
-BCRA1 promoter overlaps (from above): 2.5% of all lncRNA promoters
-BCRA1 gene body overlaps: 5587, 4.11% of lncRNA gene bodies
-# BCRA1 contains more gene body overlaps than promoter overlaps
-H3K36me3 promoter overlaps: 0.47% of all lncRNA promoters
-H3K36me3 gene body overlaps: 5469, 1.63% of lncRNA gene bodies
-# H3K36me3 contains more gene body overlaps than promoter overlaps
-JUN promoter overlaps: 1.2% of all lncRNA promoters
-JUN gene body overlaps: 842, 4.39% of lncRNA gene bodies
-# JUN contains more gene body overlaps than promoter overlaps
-MAX promoter overlaps: 4.76% of all lncRNA promoters
-MAX gene body overlaps: 13659, 12.59% of lncRNA gene bodies
-# MAX contains more gene body overlaps than promoter overlaps
-POL2RA promoter overlaps: 5.31% of all lncRNA promoters
-POL2RA gene body overlaps: 1431, 6.09% of lncRNA gene bodies
-# POL2RA contains more gene body overlaps than promoter overlaps
-POL2RA phosphoS2 promoter overlaps: 1.14% of all lncRNA promoters
-POL2RA phosphoS2 gene body overlaps: 5041, 2.64% of lncRNA gene bodies
-# POL2RA phosphoS2 contains more gene body overlaps than promoter overlaps
-POL2RA phosphoS5 promoter overlaps: 1.8% of all lncRNA promoters
-POL2RA phosphoS5 gene body overlaps: 8163, 3.32% of lncRNA gene bodies
-# POL2RA phosphoS5 contains more gene body overlaps than promoter overlaps
-TBP promoter overlaps: 4.24% of all lncRNA promoters
-TBP gene body overlaps: 2070, 5% of lncRNA gene bodies
-# TBP contains more gene body overlaps than promoter overlaps
+### BCRA1 promoter overlaps (from above): 2.5% of all lncRNA promoters
+### BCRA1 gene body overlaps: 5587, 4.11% of lncRNA gene bodies
+## BCRA1 contains more gene body overlaps than promoter overlaps
+### H3K36me3 promoter overlaps: 0.47% of all lncRNA promoters
+### H3K36me3 gene body overlaps: 5469, 1.63% of lncRNA gene bodies
+## H3K36me3 contains more gene body overlaps than promoter overlaps
+### JUN promoter overlaps: 1.2% of all lncRNA promoters
+### JUN gene body overlaps: 842, 4.39% of lncRNA gene bodies
+## JUN contains more gene body overlaps than promoter overlaps
+### MAX promoter overlaps: 4.76% of all lncRNA promoters
+### MAX gene body overlaps: 13659, 12.59% of lncRNA gene bodies
+## MAX contains more gene body overlaps than promoter overlaps
+### POL2RA promoter overlaps: 5.31% of all lncRNA promoters
+### POL2RA gene body overlaps: 1431, 6.09% of lncRNA gene bodies
+## POL2RA contains more gene body overlaps than promoter overlaps
+### POL2RA phosphoS2 promoter overlaps: 1.14% of all lncRNA promoters
+### POL2RA phosphoS2 gene body overlaps: 5041, 2.64% of lncRNA gene bodies
+## POL2RA phosphoS2 contains more gene body overlaps than promoter overlaps
+### POL2RA phosphoS5 promoter overlaps: 1.8% of all lncRNA promoters
+### POL2RA phosphoS5 gene body overlaps: 8163, 3.32% of lncRNA gene bodies
+## POL2RA phosphoS5 contains more gene body overlaps than promoter overlaps
+### TBP promoter overlaps: 4.24% of all lncRNA promoters
+### TBP gene body overlaps: 2070, 5% of lncRNA gene bodies
+## TBP contains more gene body overlaps than promoter overlaps
+
+### Note*** percentages obtained above are from dividing peaks at gene bodies by total peaks
 
 # I am curious if my proteins are transcription factors so I will use the annotations in a cell paper I found and see
+## Using this code, num_peaks will now contain a column that says wether my protein of interest is a TF 
 ```{r TF annotations}
 
 # downloading TF annotations 
@@ -381,8 +386,8 @@ num_peaks_df <- num_peaks_df[,1:12]
 write_csv(num_peaks_df, "results/num_peaks_df.csv")
 ```
 
-# It is nice and all to find overlaps, but I am interested in how many proteins
-# bind a specific promoter. I will use my handy "occurence" parameter in " count peaks per feature" 
+# It is nice and all to find overlaps, but I am interested in how many proteins bind a specific promoter.
+# I will use my handy "occurence" parameter in " count peaks per feature" 
 ```{r peak occurence}
 
 # using using count_peaks_per_feature to get occurence parameter
@@ -407,22 +412,22 @@ peak_occurence_df <- data.frame("gene_id" = colnames(promoter_peak_occurence),
                                 "strand" = lncrna_mrna_promoters@strand,
                                 "number_of_dbp" = colSums(promoter_peak_occurence))
 ```
-## results: I find the max number of proteins on a promoter to be X
+## results: values found in the peak_occurence_df
 
-# Ask tomorrow if this is correct (getting these values by going into the peak_occurence_df)
-BCRA1: N/A - not in annotation file
-H3K36me3: N/A - not in annotation file
-JUN: max # of proteins on a promoter is 18
-MAX: max # of proteins on a promoter is 15
-POL2RA: N/A - not in annotation file
-POL2RA phosphoS2: N/A - not in annotation file
-POL2RA phosphoS5: N/A - not in annotation file
-TBP: max # of proteins on a promoter is 18
+### BCRA1: N/A - not in annotation file
+### H3K36me3: N/A - not in annotation file
+### JUN: max # of proteins on a promoter is 18
+### MAX: max # of proteins on a promoter is 15
+### POL2RA: N/A - not in annotation file
+### POL2RA phosphoS2: N/A - not in annotation file
+### POL2RA phosphoS5: N/A - not in annotation file
+### TBP: max # of proteins on a promoter is 18
 
 # Now I want to start plotting my results
 # First I will see if there is a realtionship between peak number and total DNA covered
 ## Result:
- Yes there is a relationship between peak number and total DNA covered, the more number of peaks, the more DNA covered. See below:
+### Yes there is a relationship between peak number and total DNA covered, the more number of peaks, the more DNA covered. 
+### See below:
 ```{r}
 ggplot(num_peaks_df, aes(x = num_peaks, 
                          y = total_peak_length)) +
@@ -430,6 +435,7 @@ ggplot(num_peaks_df, aes(x = num_peaks,
 ```
 
 # Now I want to color my plot by wether the protein is a TF or not.
+### See below:
 ```{r}
 ggplot(num_peaks_df, aes(x = num_peaks, 
                  y = total_peak_length,
@@ -439,17 +445,15 @@ ggplot(num_peaks_df, aes(x = num_peaks,
 ```
 
 # I want to make a histogram of the number of peaks for each of my proteins
-
+### See below:
 ```{r}
 ggplot(num_peaks_df, aes(x = num_peaks)) +
   geom_histogram()
 ```
 
 # Now I want to facet this by the type of DNA binding domain my protein has.
+### See below:
 ```{r}
 ggplot(num_peaks_df, aes(x = num_peaks, fill = tf)) +
    geom_histogram(bins = 30, position = "dodge")
 ```
-
-# Cool now I am ready to send my result to my collaborator as a
-# Knitted document
