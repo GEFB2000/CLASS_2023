@@ -1,0 +1,986 @@
+---
+title: "Final_class_project"
+author: "Georgia Barone"
+date: "4/21/2023"
+output: html_document
+---
+# Workflow: 
+## 1. Load in libraries & functions 
+## 2. Analyze the large data (ENCODE ChIP data) for general properties 
+## 3. Cluster results to see how similar genes are to eachother
+## 4. Metaplot analysis on binding profiles of DBPs
+## 5. RNAseq, RNA expression analysis
+
+# 1. Load in libraries & functions 
+```{r setup, include=FALSE}
+# load in libraries
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(GenomicRanges)
+library(ComplexHeatmap)
+library(dplyr)
+
+# set working directory
+setwd("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global")
+
+# load in functions
+source("util/my_class_functions.R")
+source("util/_setup.R")
+
+# load in .RData file for all variables
+load("final_proj_env.RData", verbose = T)
+```
+
+# 2. Analyze the large data (ENCODE ChIP data) for general properties
+# Loading in .broadPeak files for all dbps and their replicates
+```{r load .broadPeak files}
+broadpeakfilepath <- "/scratch/Shares/rinnclass/CLASS_2023/data/data/peaks"
+
+# importing peaks as granges with "import_peaks" function
+peak_list <- import_peaks(consensus_file_path = broadpeakfilepath)
+```
+
+# Consensus peaks will be created by using the consensus_from_reduced function (which takes a peak list and a dbp object) in two steps:
+## 1. create a dbp object of unique names for dbp
+## 2. run consensus_from_reduced
+```{r create consensus peaks}
+  # Create unique DBP object for create_consensus_peaks_from_reduced
+dbp <- unique(sapply(names(peak_list), function(x) {
+   unlist(strsplit(x, "_"))[1]
+}))
+
+# Run consensus_from_reduced function 
+consensus_list <- lapply(dbp, consensus_from_reduced, peak_list)
+
+# adding names to the GRange list
+names(consensus_list) <- dbp
+```
+
+# Looking at number of peaks in each DBP's consensus peaks for filtering
+```{r number of peaks in consenus peaks}
+# creating list of num_peaks per dbp
+num_peaks <- sapply(consensus_list, length)
+
+# make peak histogram
+hist(num_peaks, breaks = 1000)
+hist(num_peaks, breaks = 1000, xlim = c(0,3000))
+ggsave("figures/hist_num_peaks.pdf")
+```
+## From the results, will be using a 1000 peak minimum
+### TODO: Filter out any chip data less 1,000 peaks == filtered consensus peaks
+
+# Filter consensus peak list to only DBPs > 1000 peaks
+```{r filtered_consenus_list}
+# filtering to 1000 peaks
+filtered_consensus_list <- consensus_list[sapply(consensus_list, length) > 1000]
+
+# saving 
+save(filtered_consensus_list, file = "results/filtered_consensus_list.RData")
+
+# keeping track of DBPs lost
+lost_dbps <- names(consensus_list[sapply(consensus_list, length) < 1000]) %>% as.data.frame()
+
+# saving 
+write.table(lost_dbps, "results/lost_dbps.csv")
+```
+
+# Export filtered consensus peaks in results directory
+```{r export filtered consensus peaks}
+
+# exporting filtered consensus peaks in results folder
+for(i in 1:length(filtered_consensus_list)) {
+  rtracklayer::export(filtered_consensus_list[[i]], 
+                      paste0("results/filtered_consensus_peaks/", 
+                             names(filtered_consensus_list)[i], 
+                             "_filtered_consensus_peaks.bed"))
+}
+```
+
+# Load in genome features (.Rdata file from previous streamlined chip analysis)
+```{r loading in genome features}
+# load in genome features
+load("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/01_peak_features/results/peak_features.RData")
+```
+
+# Make df of filtered consensus peaks
+```{r creating num_peaks_df to track peak properties}
+
+# creating num_peaks_df, a df with dbp name and the number of consensus peaks
+num_peaks_df <- data.frame("dbp" = names(filtered_consensus_list),
+                           "num_peaks" = sapply(filtered_consensus_list, length))
+
+# total genome covered by peaks
+num_peaks_df$total_peak_length <- sapply(filtered_consensus_list, function(x) sum(width(x)))
+
+# creating variable for the number of promoter overlaps 
+promoter_peak_counts <- count_peaks_per_feature(lncrna_mrna_promoters, filtered_consensus_list, type = "counts")
+
+# creating promoter peak_occurrence for clustering 
+promoter_peak_occurrence_matrix <- count_peaks_per_feature(lncrna_mrna_promoters, filtered_consensus_list, type = "occurrence")
+
+# saving
+write.table(promoter_peak_occurrence_matrix, "results/promoter_peak_occurrence_matrix.tsv")
+
+# make a peak_occurence df
+peak_occurrence_df <- data.frame("gene_id" = colnames(promoter_peak_occurrence_matrix),
+                                "gene_name" = lncrna_mrna_promoters$gene_name,
+                                "gene_type" = lncrna_mrna_promoters$gene_type,
+                                "chr" = lncrna_mrna_promoters@seqnames,   
+                                "1kb_up_tss_start" = lncrna_mrna_promoters@ranges@start,
+                                "strand" = lncrna_mrna_promoters@strand,
+                                "number_of_dbp" = colSums(promoter_peak_occurrence_matrix))
+
+# saving
+write_csv(peak_occurrence_df, "results/peak_occurrence_dataframe.csv")
+
+# saving as RData frame, so we don't need to run each time
+save(peak_occurrence_df, file = "results/peak_occurrence_df.RData")
+```
+
+# Analysis of the relationship between the number of peaks and total coverage
+```{r relationship between number of peaks and DBP/total coverage}
+# histogram of peak number & DBP
+ ggplot(num_peaks_df, aes(x = num_peaks)) + 
+  geom_histogram(bins = 70)
+
+# saving
+ggsave("figures/num_peaks_hist.pdf")
+
+# scatterplot of number of peaks vs genome coverage
+ggplot(num_peaks_df, aes(x = num_peaks, y = total_peak_length)) +
+  geom_point() + 
+  geom_smooth(method = "gam", se = TRUE, color = "black", lty = 2)+
+  ylab("BP covered") +
+  xlab("Number of peaks") +
+  ggtitle("Peak count vs. total bases covered")
+
+# saving 
+ggsave("figures/peak_num_vs_coverage.pdf")
+```
+# Results: 
+## 1. Most DBPs have < 40,000 peaks, there are very few peaks past 40,000 
+## 2. The number of peaks and genome coverage have a linear relationship with eachother
+
+# Analysis of differences between mRNA and lncRNA promoter overlaps
+```{r promoter overlaps}
+
+# sum rows to get total number of promoter overlaps
+num_peaks_df$peaks_overlapping_promoters <- rowSums(promoter_peak_counts)
+
+# % of total promoter overlaps
+num_peaks_df$percent_total_promoter_overlaps <- (num_peaks_df$peaks_overlapping_promoters/36814)*100
+average_percent_promoter_overlaps <- mean(num_peaks_df$percent_total_promoter_overlaps)
+
+# printing out average % of total promoter overlaps
+print(paste0("The average % of total promoter overlaps is ", average_percent_promoter_overlaps, "%"))
+
+# lncrna promoter overlaps 
+num_peaks_df$peaks_overlapping_lncrna_promoters <- rowSums(promoter_peak_counts[,lncrna_gene_ids])
+
+# % of total lncrna overlaps
+num_peaks_df$percent_lncrna_promoter_overlaps <- (num_peaks_df$peaks_overlapping_lncrna_promoters/36814)*100
+average_percent_lncrna_promoter_overlaps <- mean(num_peaks_df$percent_lncrna_promoter_overlaps)
+
+# printing out average % of lncrna promoter overlaps
+print(paste0("The average % of lncRNA promoter overlaps is ", average_percent_lncrna_promoter_overlaps, "%"))
+
+# mrna promoter overlaps
+num_peaks_df$peaks_overlapping_mrna_promoters <- rowSums(promoter_peak_counts[,mrna_gene_ids])
+
+# % of total mrna overlaps
+num_peaks_df$percent_mrna_promoter_overlaps <- (num_peaks_df$peaks_overlapping_mrna_promoters/36814)*100
+average_percent_mrna_promoter_overlaps <- mean(num_peaks_df$percent_mrna_promoter_overlaps)
+
+# printing out average % of mrna promoter overlaps
+print(paste0("The average % of mRNA promoter overlaps is ", average_percent_mrna_promoter_overlaps, "%"))
+```
+# Results:
+## 1. The average % of total promoter overlaps is 27.2122081968311%
+## 2. The average % of lncRNA promoter overlaps is 6.62486844615484%
+## 3. The average % of mRNA promoter overlaps is 20.5873397506762%
+
+## Take home: there are more mRNA promoter overlaps than lncRNA promoter overlaps
+
+# Analysis of differences between mRNA and lncRNA gene body overlaps
+```{r gene body overlaps}
+# Finding overlaps with gene_bodies 
+genebody_peak_counts <- count_peaks_per_feature(mrna_lncrna_genes, 
+                                                filtered_consensus_list, 
+                                                type = "counts")
+
+# all gene bodies overlaps
+num_peaks_df$peaks_overlapping_genebody <- rowSums(genebody_peak_counts)
+
+# % of total gene body overlaps
+num_peaks_df$percent_total_genebody_overlaps <- (num_peaks_df$peaks_overlapping_genebody/36814)*100
+average_percent_genebody_overlaps <- mean(num_peaks_df$percent_total_genebody_overlaps)
+
+# printing out average % of total gene body overlaps
+print(paste0("The average % of total gene body overlaps is ", average_percent_genebody_overlaps, "%"))
+
+# lncrna gene bodies 
+num_peaks_df$peaks_overlapping_lncrna_genebody <- rowSums(genebody_peak_counts[,lncrna_gene_ids])
+
+# % of lncrna gene body overlaps
+num_peaks_df$percent_lncrna_genebody_overlaps <- (num_peaks_df$peaks_overlapping_lncrna_genebody/36814)*100
+average_percent_lncrna_genebody_overlaps <- mean(num_peaks_df$percent_lncrna_genebody_overlaps)
+
+# printing out average % of lncrna gene body overlaps
+print(paste0("The average % of lncRNA gene body overlaps is ", average_percent_lncrna_genebody_overlaps, "%"))
+
+# mrna gene bodies
+num_peaks_df$peaks_overlapping_mrna_genebody <- rowSums(genebody_peak_counts[,mrna_gene_ids])
+
+# % of mrna gene body overlaps
+num_peaks_df$percent_mrna_genebody_overlaps <- (num_peaks_df$peaks_overlapping_mrna_genebody/36814)*100
+average_percent_mrna_genebody_overlaps <- mean(num_peaks_df$percent_mrna_genebody_overlaps)
+
+# printing out average % of mrna gene body overlaps
+print(paste0("The average % of mRNA gene body overlaps is ", average_percent_mrna_genebody_overlaps, "%"))
+```
+# Results:
+## 1. The average % of total gene body overlaps is 62.2646781242222%
+## 2. The average % of lncRNA gene body overlaps is 12.9164208257475%
+## 3. The average % of mRNA gene body overlaps is 49.3482572984747%
+
+## Take home: 
+### There are more mRNA gene body overlaps than lncRNA gene body overlaps overlaps
+### There are more total gene body overlaps in mRNA and lncRNA compared to promoter overlaps in mRNA and lncRNA
+
+# Analysis of the distribution of promoter overlaps versus gene-bodies
+```{r distribition of promoter & gene body overlaps}
+# distribution of promoter overlaps
+
+# graph representing the number of DBPs on promoters
+ggplot(num_peaks_df,
+       aes(x = num_peaks, y = peaks_overlapping_promoters)) +
+  xlab("Peaks per DBP") +
+  ylab("Number of peaks overlapping promoters") +
+  ggtitle("Relationship Between Number of DBP Peaks and Promoter Overlaps")+
+  geom_point() +
+  geom_abline(slope = 1, linetype="dashed") +
+  geom_smooth(method = "lm", se=FALSE, formula = 'y ~ x',
+              color = "#a8404c") +
+  ylim(0,60100) +
+  xlim(0,60100)
+
+# saving
+ggsave("figures/peak_num_vs_promoter_coverage.pdf")
+
+# graph representing the coverage on gene bodies
+ggplot(num_peaks_df,
+       aes(x = num_peaks, y = peaks_overlapping_genebody)) +
+  xlab("Peaks per DBP") +
+  ylab("Number of peaks overlapping genes") +
+  ggtitle("Relationship Between Number of DBP Peaks and Gene Body Overlaps")+
+  geom_point() +
+  geom_abline(slope = 1, linetype="dashed") +
+  geom_smooth(method = "lm", se=F, formula = 'y ~ x',
+              color = "#a8404c") +
+  ylim(0,60100) +
+  xlim(0,60100)
+
+# printing out slope of the line
+trendline_genebodies <- lm(formula = 'peaks_overlapping_genebody ~ num_peaks', data=num_peaks_df)
+print(trendline_genebodies)
+print("The slope of the trendline representing the relationship between the number of DBP peaks and gene body overlaps is 0.88, meaning 88% of binding events overlap with gene bodies")
+
+# saving
+ggsave("figures/4_peak_num_vs_gene_body_coverage.pdf")
+```
+# Results:
+# Promoter distribution: 
+## 1. As you get more peaks, you are saturating binding sites. You can see this in the graph that is produced. As you increase in the number of peaks per DBP, the number of peaks overlapping promoters stop increasing as rapidly and plateau. 
+
+# Gene body distribution:
+## 1. The slope of the trendline representing the relationship between the number of DBP peaks and gene body overlaps is 0.88, meaning 88% of binding events overlap with gene bodies
+
+
+## Take home: 
+### Histone proteins wrap up DNA into compact structures, so this is an example of a protein that would overlap with gene bodies. In fact, 88% of binding events overlap with gene bodies. Additionally, DBPs that are associated with binding to the promoter bind more frequently when there are less DBPs bound to the promoter, compared to when the promoter is saturated.  
+
+# Density plot of binding events (number of DBPs bound per promoter)
+## Investigation of super-binders
+```{r superbinders}
+# density plot of binding events (DBP localization)
+ggplot(peak_occurrence_df, aes(x = number_of_dbp)) +
+geom_density(alpha = 0.2, color = "#424242", fill = "#424242") +
+  theme_paperwhite() +
+  xlab(expression("Number of DBPs")) +
+  ylab(expression("Density")) +
+  ggtitle("Promoter binding events",
+          subtitle = "mRNA and lncRNA genes") 
+
+# saving
+ggsave("figures/num_binding_events_per_promoter.pdf")
+
+# based on graph, super-binders are between 200 & 400 on x axis (number of DBPs)
+# make a variable for super binders & filter
+super_binders <- filter(peak_occurrence_df, number_of_dbp %in% c(200:400))
+
+# making a list of super binders gene names
+super_binders_gene_name <- super_binders$gene_name
+super_binders_gene_name_uniq <- unique(super_binders_gene_name)
+
+# seeing how many duplicate genes are in super_binders_gene_name
+length(super_binders_gene_name)
+super_binders_gene_name_uniq_len <- length(super_binders_gene_name_uniq)
+# only 3 genes are duplicates
+
+# finding the number of lncRNA genes that have super binder promoters
+lncrna_super_binders <- filter(super_binders, gene_type == "lncRNA")
+length_lncrnasuperbinders <- nrow(lncrna_super_binders)
+print(paste0("There are ", length_lncrnasuperbinders, " lncRNA genes that have super binder promoters in this dataset"))
+
+# percent of lncRNA genes that have super binder promoters out of total super binder genes
+percent_lncrna_with_superbinders <- length_lncrnasuperbinders/super_binders_gene_name_uniq_len *100
+print(paste0(percent_lncrna_with_superbinders, " % of super binder promoters are on lncRNA genes according to this dataset"))
+
+# finding the number of mRNA genes that have super binder promoters
+mrna_super_binders <- filter(super_binders, gene_type == "protein_coding")
+length_mrnasuperbinders <- nrow(mrna_super_binders)
+print(paste0("There are ", length_mrnasuperbinders, " mRNA genes that have super binder promoters in this dataset"))
+
+# percent of mRNA genes that have super binder promoters out of total super binder genes
+percent_mrna_with_superbinders <- length_mrnasuperbinders/super_binders_gene_name_uniq_len *100
+print(paste0(percent_mrna_with_superbinders, " % of super binder promoters are on mRNA genes according to this dataset"))
+```
+# Result:
+## 1. Super binder promoters are on genes that contain approx 200 - 400 DBPs (second hump on the curve)
+## 2. There are 2520 lncRNA genes that have super binder promoters in this dataset
+## 3. 21.5255829845392 % of super binder promoters are on lncRNA genes according to this dataset
+## 4. There are 9192 mRNA genes that have super binder promoters in this dataset
+## 5. 78.5171265055095 % of super binder promoters are on mRNA genes according to this dataset
+
+## Take home:
+### Super binder promoters are on genes with 200 - 400 DBPs
+### There are some (21.5%) super binder promoters on lncRNA genes
+### There are a lot (78.5%) super binder promoters on mRNA genes
+### Super binders are more associated with mRNAs compared to lncRNAs
+
+# Analysis of most represented type of DBP/which proteins are TFs
+```{r most represented type of DBP}
+# graphing most represented type of DBP
+ggplot(peak_occurrence_df, aes(x=gene_type, y=number_of_dbp)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=4) + theme_paperwhite() +
+  xlab(expression("Gene Type")) +
+  ylab(expression("Number of DNA Binding Proteins")) +
+  ggtitle("Most Represented Type of DBP")
+
+# saving
+ggsave("figures/most_represented_type_dbp_.pdf")
+
+# loading in TF annotation data
+human_tfs <- readxl::read_excel("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/results/mmc2 (1).xlsx")
+
+# let's rename the columns to indicate if it is a TF/etc
+names(human_tfs)[4] <- "is_tf"
+names(human_tfs)[2] <- "Name"
+names(human_tfs)[1] <- "ID"
+names(human_tfs)[3] <- "DBP"
+
+
+# intersect gene names that are in our ChIP data and has TF identity
+length(which(tolower(num_peaks_df$dbp) %in% tolower(human_tfs$Name)))
+
+# merging annotation file to num_peaks_df
+# grab the first 4 columns that match DBPs in num_peaks_df
+human_tfs <- human_tfs[tolower(human_tfs$Name) %in% tolower(num_peaks_df$dbp), 1:4]
+
+# adding new column names
+names(human_tfs) <- c("ensembl_id",
+                      "dbp",
+                      "dbd",
+                      "tf")
+
+# merge
+num_peaks_df <- merge(num_peaks_df, human_tfs, all.x = T)
+
+# percent of DBPs are TFs
+tf_dbps <- filter(num_peaks_df, tf == "Yes")
+
+# nrows dbps & calculating % TFs
+len_tfs <- nrow(tf_dbps)
+len_total_dbps <- nrow(num_peaks_df)
+percent_tfs <- len_tfs/len_total_dbps * 100
+paste(paste0(percent_tfs, " % of DBPs are transcription factors"))
+```
+# Results:
+## 1. The most represented type of DBPs are protein coding transcripts. This make sense as mRNA transcripts are produced from protein coding genes. 
+## 2. 80 % of DBPs are transcription factors
+
+## Take home:
+### Most DBPs are transcription factors and come from mRNA transcripts. 
+
+# 3. Cluster results to see how similar genes are to eachother
+# First, lets make a general dendrogram
+```{r preliminary cluster}
+# creating distance matrix
+peak_occurrence_dist <- dist(promoter_peak_occurrence_matrix, method = "binary")
+
+# clustering distance values
+bin_hier <- hclust(peak_occurrence_dist, method = "complete")
+
+# Dendrogram of binding profiles by promoter (not binding profile - below)
+ggdendro::ggdendrogram(bin_hier, rotate = FALSE,  size = 3,
+                       theme_dendro = TRUE) +
+   coord_flip() +
+   scale_y_continuous() +
+   scale_x_continuous(position = "top") +
+   scale_x_continuous(breaks = seq_along(bin_hier$labels[bin_hier$order]),
+             labels = bin_hier$labels[bin_hier$order], position = "top",
+             expand = c(0,0)) +
+   theme(axis.text.x = element_text(angle = 90, hjust  = 1)) +
+   theme(axis.text.y = element_text(angle = 0,hjust = 1)) +
+   scale_y_reverse(expand = c(0.01, 0)) +
+   theme(
+     plot.background = element_blank(),
+     panel.grid.major = element_blank(),
+   panel.grid.minor = element_blank(),
+     panel.border = element_blank()
+   )
+
+# saving
+ggsave("figures/promoter_overlap_dendrogram.pdf", height = 49, width = 12)
+```
+# Results:
+## 1. Histone modifications cluster together (H3K9me3, H3K36me3 specifically)
+## 2. FOX proteins also cluster together (FOXA2, FOXA1 specifically) 
+## 3. Zinc fingers are scattered throughout clustering, meaning they might peform a variety of functions throughout the genome (specific to the type of zinc finger)
+
+
+# Clustering lncRNA and mRNA seprately 
+```{r clustering lncRNA and mRNA seprately}
+
+# split into lncRNA and mRNA
+lncrna_promoters <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_type == "lncRNA"]
+mrna_promoters <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_type == "protein_coding"]
+
+# Use indexing to separate peak_occurrence_matrix in lncRNA and mRNA.
+lncrna_peak_occurence <- promoter_peak_occurrence_matrix[,lncrna_promoters$gene_id]
+mrna_peak_occurence <- promoter_peak_occurrence_matrix[,mrna_promoters$gene_id]
+
+# lncRNA cluster
+bin_hier_lncrna <- hclust(dist(lncrna_peak_occurence, method = "binary"))
+
+# Now plot with ggdendro
+ggdendro::ggdendrogram(bin_hier_lncrna, rotate = T,  size = 3)
+ 
+# Now let's save this figure
+ggsave("figures/lncrna_hclust_binary_dist.pdf", height = 49, width = 6)
+
+# mRNA cluster
+bin_hier_mrna <- hclust(dist(mrna_peak_occurence, method = "binary"))
+ 
+# plotting with ggdendro
+ggdendro::ggdendrogram(bin_hier, rotate = TRUE,  size = 3)
+
+# saving
+ggsave("figures/mrna_hclust_binary_dist.pdf", height = 44, width = 6)
+```
+# Results:
+## 1. lncRNA cluster: 
+### ZNF616 seems to be similar to ZIK1 based on the clustering results. ZIK1 is associated with the regulation of DNA-binding/transcription factor activity. I hypothesize that ZNF616 might be involved with protein-DNA binding interactions in the genome [1]. 
+
+## 2. mRNA cluster: 
+### ZNF644 seems to be similar to FOXP1 based on the clustering results. FOXP1 inhbits tumor progression by regulating IFR1 expression. Similarly, some preliminary analysis has been conducted on FOXP1 which has been found in the tissues of cancer paitents in some studies [2].
+
+### Refrences:
+### 1. https://www.genecards.org/cgi-bin/carddisp.pl?gene=ZNF616
+### 2. https://www.proteinatlas.org/ENSG00000122482-ZNF644/pathology
+
+# 4. Metaplot analysis
+## First lets assess binding profiles over the promoter
+```{r metaplots}
+
+# # establishing DF
+#  metaplot_df <- data.frame(x = integer(), dens = numeric(), dbp = character())
+# 
+# # suppress warnings for population of DF
+#  suppressWarnings({
+# 
+# # for loop to populate DF 
+#  for(i in 1:length(filtered_consensus_list)) {
+#   # print(names(filtered_consensus_list)[[i]])
+#   tmp_df <- profile_tss(filtered_consensus_list[[i]], lncrna_mrna_promoters)
+#   tmp_df$dbp <- names(filtered_consensus_list)[[i]]
+#   metaplot_df <- bind_rows(metaplot_df, tmp_df)
+# }
+# })
+# 
+# # saving
+# write_rds(metaplot_df, "results/metaplot_df_final.rds")
+# metaplot_df <- read_rds("results/metaplot_df_final.rds")
+# 
+# # create distance matrix of binding profile correlations
+# metaplot_filtered_matrix <- metaplot_df %>% 
+#   pivot_wider(names_from = x, values_from = dens) %>%
+#   column_to_rownames("dbp") %>%
+#   as.matrix()
+# mm_scaled <- t(scale(t(metaplot_filtered_matrix)))
+# metaplot_hclust <- hclust(dist(mm_scaled), method = "complete")
+
+# plot relationship between binding profiles
+plot(metaplot_hclust)
+pdf("figures/tss_profile_dendrogram.pdf", height = 10, width = 27)
+par(cex=0.3)
+plot(metaplot_hclust)
+dev.off()
+
+# check and see how many clusters we have
+clusters <- cutree(metaplot_hclust, k=6)
+table(clusters)
+print("From the metaplot hclustering data frame (after clustering & tabling), we see 6 clusters based on binding profiles")
+```
+# Results:
+## 1: When we create a metaplot to cluster the relationship between DBPs and their binding profiles, we see 6 clusters emerge
+
+## Take home:
+### Lets explore these binding profile clusters in further detail 
+### We will make another metaplot to do this
+
+# Analysis of 6 clusters based on binding profiles from graph above
+```{r analysis of 6 binding profile clusters}
+
+# plot cluster 1
+dev.new()
+pdf("figures/cluster_1_heatmap.pdf", height = 35, width = 10)
+Heatmap(mm_scaled[clusters == 1,], cluster_columns = FALSE,  border = TRUE, 
+        show_column_names = FALSE,
+        use_raster = TRUE,
+        column_gap = unit(0, "mm"),row_names_gp = gpar(fontsize = 7))
+graphics.off()
+# binding is (broadly) centered over transcription start site
+
+# plot cluster 2
+dev.new()
+pdf("figures/cluster_2_heatmap.pdf", height = 35, width = 10)
+Heatmap(mm_scaled[clusters == 2,], cluster_columns = FALSE,  border = TRUE, 
+        show_column_names = FALSE,
+        use_raster = TRUE,
+        column_gap = unit(0, "mm"),row_names_gp = gpar(fontsize = 7))
+graphics.off()
+# binding is centered over transcription start site (more narrow binding region compared to cluster 1)
+
+# plot cluster 3
+dev.new()
+pdf("figures/cluster_3_heatmap.pdf", height = 35, width = 10)
+Heatmap(mm_scaled[clusters == 3,], cluster_columns = FALSE,  border = TRUE, 
+        show_column_names = FALSE,
+        use_raster = TRUE,
+        column_gap = unit(0, "mm"),row_names_gp = gpar(fontsize = 7))
+graphics.off()
+# binding is centered very narrowly over transcription start site
+
+# plot cluster 4
+dev.new()
+pdf("figures/cluster_4_heatmap.pdf", height = 35, width = 10)
+Heatmap(mm_scaled[clusters == 4,], cluster_columns = FALSE,  border = TRUE, 
+        show_column_names = FALSE,
+        use_raster = TRUE,
+        column_gap = unit(0, "mm"),row_names_gp = gpar(fontsize = 7))
+graphics.off()
+# there are less binding events in the transcription start site in histones/histone modifications in this cluster
+
+# cluster 5 only has 1 DBP
+cluster_5 <- names(clusters[5])
+print(paste0("Cluster 5 only contains 1 DBP, which is ", cluster_5))
+
+# plot cluster 6
+dev.new()
+pdf("figures/cluster_6_heatmap.pdf", height = 35, width = 10)
+Heatmap(mm_scaled[clusters == 6,], cluster_columns = FALSE, border = TRUE, 
+        show_column_names = FALSE,
+        use_raster = TRUE,
+        column_gap = unit(0, "mm"),row_names_gp = gpar(fontsize = 7))
+graphics.off()
+# there are less binding sites in the transcription start site region (similar to cluster 4)
+```
+# Results: 
+## 1. For cluster 1, binding is widely centered around the transcription start site. More positive matrix numbers are centered in the middle of the graph, meaning that there are more binding events that occur in this region. 
+## 2. For cluster 2, binding is more narrowly centered around the transcription start site compared to cluster 1. 
+## 3. For cluster 3, binding is centered very narrowly over transcription start site compared to clusters 1 & 2. 
+## 4. For cluster 4, there are less binding events in the transcription start site in histones/histone modifications in this cluster. We see this because unlike clusters 1 - 3, cluster 4 contains negative matrix numbers centered in the middle of the heat map (indicative of less binding events occuring in this region).
+## 5. Cluster 5 only contains 1 DBP, which is AKAP8. AKAP8 is a metal ion (zinc) binding DNA binding protein according to the literature [3].
+## 6. For cluster 6, there are less binding sites in the transcription start site region (similar to cluster 4).
+
+### Refrences:
+### 3. https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6981122/
+
+# Metaplot analysis of mRNA and lncRNA promoters
+```{r metaplot analysis of mRNA and lncRNA promoters}
+# lncrna metaplot analysis
+
+# # making empty df to populate
+# lncrna_metaplot_df <- data.frame(x = integer(), dens = numeric(), dbp = character())
+# 
+# # for loop to populate lncrna_metaplot_df with overlap density in lncrna promoters
+# suppressWarnings({
+# for(i in 1:length(filtered_consensus_list)) {
+#   #print(names(filtered_consensus_list)[[i]])
+#   tmp_df <- profile_tss(filtered_consensus_list[[i]], lncrna_mrna_promoters = lncrna_promoters)
+#   tmp_df$dbp <- names(filtered_consensus_list)[[i]]
+#   lncrna_metaplot_df <- bind_rows(lncrna_metaplot_df, tmp_df)
+#   
+# }
+# })
+# 
+# # saving lncrna_metaplot_df
+# write_rds(lncrna_metaplot_df, "results/lncRNA_metaplot_df_final.rds")
+# 
+# # mrna metaplot analysis 
+# 
+# # making empty df to populate
+# mrna_metaplot_df <- data.frame(x = integer(), dens = numeric(), dbp = character())
+# 
+# # for loop to populate mRNA_metaplot
+# suppressWarnings({
+# for(i in 1:length(filtered_consensus_list)) {
+#  # print(names(filtered_consensus_list)[[i]])
+#   tmp_df <- profile_tss(filtered_consensus_list[[i]], lncrna_mrna_promoters = mrna_promoters)
+#   tmp_df$dbp <- names(filtered_consensus_list)[[i]]
+#   mrna_metaplot_df <- bind_rows(mrna_metaplot_df, tmp_df)
+#   
+# }
+# })
+# 
+# # saving mRNA metaplots
+# write_rds(mrna_metaplot_df, "results/mrna_metaplot_df_final.rds")
+# 
+# # add information on gene type
+# 
+# # add columns with gene type info
+# mrna_metaplot_df$gene_type <- "mRNA"
+# lncrna_metaplot_df$gene_type <- "lncRNA"
+# combined_metaplot_profile <- bind_rows(mrna_metaplot_df, lncrna_metaplot_df)
+# 
+# # saving
+# write_rds(mrna_metaplot_df, "results/metaplot_df_final.rds")
+
+# make metaplot for both lncrna and mrna binding profiles
+suppressWarnings({
+ggplot(combined_metaplot_profile, 
+       aes(x = x, y = dens, color = gene_type )) +
+  geom_vline(xintercept = 0, lty = 2) + 
+  geom_line(size = 1.5) + 
+  facet_wrap(dbp ~ ., scales = "free_y") +
+  ggtitle("Promoter Metaplot") + 
+  scale_x_continuous(breaks = c(-1000, 0, 1000),
+                     labels = c("-1kb", "TSS", "+1kb"),
+                     name = "") + 
+  ylab("Peak frequency") +
+ scale_color_manual(values = c("#424242","#a8404c"))
+})
+  
+# saving
+ggsave("figures/mega_meta_plot_lncRNA-mRNA.pdf", width = 49, height = 12)
+```
+# Results:
+## 1. Most DBPs share a similar binding profile, that is centered on the TSS
+## 2. Many His modifications & 2 other DBPs (H3K27ac, H3K4me1, H3K4me2, H3K79me2, H4K20me1, EZH2, H2AFZ) bind around the TSS, but not directly on the TSS
+## 3. H3K36me3 has bad data (we went over this in class), the metaplot is "boxy" and does not look quite right
+
+## Take home:
+### Histones/histone modifications typically have different binding profiles compared to other DBPs in the ECODE ChIP dataset
+
+# Metaplot analysis of DBPs on superbinders vs regular promoters
+```{r metaplot analysis of DBPs on superbinders vs regular promoters}
+# filtering super binders
+peak_occurrence_df <- peak_occurrence_df %>%
+  mutate(superbinder = peak_occurrence_df$number_of_dbp > 200)
+
+# setting column of superbinders
+peak_occurrence_df <- peak_occurrence_df %>% 
+  mutate(superbinder2 = ifelse(peak_occurrence_df$superbinder ==T, "super_binder", "not_super_binder"))
+
+# subset super binders
+super_binder_promoters <- subset(peak_occurrence_df, superbinder2 == "super_binder")
+super_binder_promoters <- dplyr::select(super_binder_promoters, "gene_id")
+
+# subset non super binders
+non_super_binder_promoters <- subset(peak_occurrence_df, superbinder2 == "not_super_binder")
+super_binder_promoters <- dplyr::select(non_super_binder_promoters, "gene_id")
+
+# subset lnc & mRNA promoters by superbinders (to get into a GRanges object)
+super_binder_gr <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_id %in% super_binder_promoters$gene_id]
+non_super_binder_gr <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_id %in% non_super_binder_promoters$gene_id]
+
+# # making empty df to populate for super binders
+# highbinder_metaplot_df <- data.frame(x = integer(), dens = numeric(), dbp = character())
+# 
+# # for loop to populate high binder metaplot
+# suppressWarnings({
+# for(i in 1:length(filtered_consensus_list)) {
+#  # print(names(filtered_consensus_list)[[i]])
+#   tmp_df <- profile_tss(filtered_consensus_list[[i]], lncrna_mrna_promoters = super_binder_gr)
+#   tmp_df$dbp <- names(filtered_consensus_list)[[i]]
+#   highbinder_metaplot_df <- bind_rows(highbinder_metaplot_df, tmp_df)
+#   
+# }
+# })
+# 
+# # saving high binder metaplots
+# write_rds(highbinder_metaplot_df, "results/highbinder_metaplot_df_final.rds")
+
+# make metaplot for high binder profiles
+suppressWarnings({
+ggplot(highbinder_metaplot_df, 
+       aes(x = x, y = dens)) +
+  geom_vline(xintercept = 0, lty = 2) + 
+  geom_line(size = 1.5) + 
+  facet_wrap(dbp ~ ., scales = "free_y") +
+  ggtitle("High Binder Metaplot") + 
+  scale_x_continuous(breaks = c(-1000, 0, 1000),
+                     labels = c("-1kb", "TSS", "+1kb"),
+                     name = "") + 
+  ylab("Peak frequency") +
+ scale_color_manual(values = c("#424242","#a8404c"))
+})
+  
+# saving high binder metaplot
+ggsave("figures/highbinder_metaplot.pdf", width = 49, height = 12)
+
+# # making empty df to populate for non super binders
+# lowbinder_metaplot_df <- data.frame(x = integer(), dens = numeric(), dbp = character())
+# 
+# # for loop to populate non super binder metaplot
+# suppressWarnings({
+# for(i in 1:length(filtered_consensus_list)) {
+#  # print(names(filtered_consensus_list)[[i]])
+#   tmp_df <- profile_tss(filtered_consensus_list[[i]], lncrna_mrna_promoters = non_super_binder_gr)
+#   tmp_df$dbp <- names(filtered_consensus_list)[[i]]
+#   lowbinder_metaplot_df <- bind_rows(lowbinder_metaplot_df, tmp_df)
+#   
+# }
+# })
+# 
+# # saving non super binder binder metaplots
+# write_rds(lowbinder_metaplot_df, "results/lowbinder_metaplot_df_final.rds")
+
+# make metaplot for non super binder binder profiles
+suppressWarnings({
+ggplot(lowbinder_metaplot_df, 
+       aes(x = x, y = dens)) +
+  geom_vline(xintercept = 0, lty = 2) + 
+  geom_line(size = 1.5) + 
+  facet_wrap(dbp ~ ., scales = "free_y") +
+  ggtitle("Low Binder Metaplot") + 
+  scale_x_continuous(breaks = c(-1000, 0, 1000),
+                     labels = c("-1kb", "TSS", "+1kb"),
+                     name = "") + 
+  ylab("Peak frequency") +
+ scale_color_manual(values = c("#424242","#a8404c"))
+})
+  
+# saving low binder metaplot
+ggsave("figures/lowbinder_metaplot.pdf", width = 49, height = 12)
+
+# adding gene_type
+lowbinder_metaplot_df$gene_type <- "non_super_binder"
+highbinder_metaplot_df$gene_type <- "superbinder"
+
+# making combined metaplot
+combined_super_binder_metaplot_profile <- bind_rows(lowbinder_metaplot_df, highbinder_metaplot_df)
+
+ggplot(combined_super_binder_metaplot_profile, 
+       aes(x = x, y = dens, color = gene_type )) +
+  geom_vline(xintercept = 0, lty = 2) + 
+  geom_line(size = 1.5) + 
+  facet_wrap(dbp ~ ., scales = "free_y") +
+  ggtitle("Promoter Metaplot") + 
+  scale_x_continuous(breaks = c(-1000, 0, 1000),
+                     labels = c("-1kb", "TSS", "+1kb"),
+                     name = "") + 
+  ylab("Peak frequency") +
+ scale_color_manual(values = c("#424242","#a8404c"))
+
+# saving combined binder metaplot
+ggsave("figures/high_and_low_binder_metaplot.pdf", width = 49, height = 12)
+```
+# Results:
+## 1. Super binders generally have more "broad" peaks compared to non super binders. This is most likely due to the fact that there are so many different components binding, that the range of where the DBP binds is larger. 
+## 2. Additionally, super binders and non super binders generally bind in the same positions along the transcription start site. 
+### Note*** H3K36me3 has bad data as stated previously
+
+# 5. RNAseq expression
+
+## First, the following BASH commands will be used to download public RNAseq data
+
+### ENCODE report on experimental accessions used (fractionated and total RNA HEPG2)
+### wget -O samples.txt "https://www.encodeproject.org/report.tsv?type=Experiment&status=released&assay_slims=Transcription&assay_slims=Transcription&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens&biosample_ontology.term_name=HepG2&biosample_ontology.classification=cell+line&assay_title=total+RNA-seq&files.read_length=50&limit=all&advancedQuery=date_released:[2009-01-01%20TO%202021-12-31]"
+
+### This will give us a text file of the file names.  
+### wget -O files.txt "https://www.encodeproject.org/batch_download/?type=Experiment&status=released&assay_slims=Transcription&assay_slims=Transcription&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens&biosample_ontology.term_name=HepG2&biosample_ontology.classification=cell+line&assay_title=total+RNA-seq&files.read_length=50&limit=all&advancedQuery=date_released:[2009-01-01%20TO%202021-12-31]"
+
+# Obtainig TPMs in RNAseq data for analysis
+```{r reading in RNAseq expression data}
+# reading in the sample sheet
+samplesheet <- read_rds("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/05_R_analyses/05_RNAseq/01_differential_expression/results/final_samplesheet.rds")
+
+# reading in TPMs from Salmon
+salmon_tpm <- read.csv("/scratch/Shares/rinnclass/CLASS_2023/data/data/rnaseq/results/salmon/salmon_merged_gene_tpm.csv")
+
+# obtaining TPMs in same order as sample sheet
+tpm <- salmon_tpm %>% 
+  pivot_longer(cols = 2:ncol(.), names_to = "sample_id", values_to = "tpm") %>%
+  merge(samplesheet) %>%
+  group_by(gene_id, condition) %>%
+  summarize(tpm = mean(tpm, na.rm = T)) %>%
+  pivot_wider(names_from = condition, values_from = tpm, names_prefix = "tpm_")
+```
+
+# Analysis of DBPs bound at each promoter
+```{r DBPs are bound at each promoter}
+# peak_occurrence_df is loaded in our environment and contains how many DBPs bind to each promoter (rows), we can merge this with TPMs
+promoter_features_df <- merge(peak_occurrence_df, tpm)
+
+# DBP density plot
+ggplot(promoter_features_df, aes(x = number_of_dbp)) +
+  geom_density() 
+
+# saving
+  ggsave("figures/DBP_binding_density_plot.pdf")
+  
+# not surprisingly, we see the same bimodal binding distribution as seen before
+  
+# looking at the abundance of genes in each cellular fraction
+# turning the tpm df into a matrix
+tpm_matrix <- tpm %>% 
+  column_to_rownames("gene_id") %>%
+  as.matrix()
+
+tpm_scaled <- t(scale(t(tpm_matrix)))
+tpm_scaled <- tpm_scaled[complete.cases(tpm_scaled),]
+
+# plotting
+new.env()
+pdf("figures/heatmap_expression.pdf", height =49, width = 12)
+pheatmap::pheatmap(tpm_scaled, show_rownames = FALSE)
+graphics.off()
+```
+# Results:
+## 1. Bimodal distribution of binding at promoters (confirms previous result) 
+## 2. By looking at the heat map, most RNAs are in the nucleus 
+
+# Analysis of the relationship between number of DBPS bound on a promoter versus RNA output 
+```{r DBP promoter binding vs RNA expression}
+# plot promoter binding vs RNA expression 
+ggplot(promoter_features_df, 
+            aes(y = log2(tpm_homo_sapiens_hepg2 + 0.001), x = number_of_dbp, color = gene_type)) + 
+geom_point(data = promoter_features_df %>% filter(tpm_homo_sapiens_hepg2 > 0.001),
+             shape = 17, alpha = 0.7) +
+  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_color_manual(values = c("#a8404c", "#424242"), name = "Gene type") + 
+  ggtitle("Expression vs. promoter binding events") + 
+  xlab(expression('Number of DBPs')) +
+  ylab(expression(log[2](TPM))) 
+
+# save plot
+ggsave("figures/binding_vs_expression_total_rna.pdf")
+```
+# Results:
+## 1. There is a linear trend between the number of DBPs and TPM (an approximate measure for the number of transcripts per gene).
+## 2. This means the more DBPs that bind to a promoter of a gene, the more genes are expressed in that region. 
+
+## Take home:
+### The more DBPs bound, the more RNA transcripts are produced
+
+# Analysis of binding vs nuclear and cytosolic RNA expression
+```{r binding versus nuclear/cyto expression}
+# plot nuclear RNA abundance versus number of DBPs bound to promoter
+ggplot(promoter_features_df, 
+            aes(y = log2(tpm_homo_sapiens_nuclear_fraction + 0.001), x = number_of_dbp, color = gene_type)) + 
+  geom_point(data = promoter_features_df %>% filter(tpm_homo_sapiens_nuclear_fraction > 0.001),
+             shape = 17, alpha = 0.7) +
+  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_color_manual(values = c("#a8404c", "#424242"), name = "Gene type") + 
+  ggtitle("Nuclear Expression vs. promoter binding events") + 
+  xlab(expression('Number of DBPs')) +
+  ylab(expression(log[2](TPM))) 
+  
+# saving figure
+  ggsave("figures/nuclear_expression-vs-promoter_binding.pdf")
+  
+
+# plot difference of cyto RNAs versus DBPs on promoter
+ggplot(promoter_features_df, 
+            aes(y = log2(tpm_homo_sapiens_cytosolic_fraction + 0.001), x = number_of_dbp, color = gene_type)) + 
+  geom_point(data = promoter_features_df %>% filter(tpm_homo_sapiens_cytosolic_fraction > 0.001),
+             shape = 17, alpha = 0.7) +
+  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_color_manual(values = c("#a8404c", "#424242"), name = "Gene type") + 
+  ggtitle("Cytoplasmic Expression vs. promoter binding events") + 
+  xlab(expression('Number of DBPs')) +
+  ylab(expression(log[2](TPM))) 
+  
+# saving figure
+  ggsave("figures/cytoplasmic_expression-vs-promoter_binding.pdf")
+```
+# Results:
+## 1. Nuclear expression looks very similar to total RNA binding vs expression (linear relationship)
+## 2. Cytosolic expression looks pretty low in abundance. There is also a linear relationship in this graph as well. 
+
+# Analysis of how many lncRNA and mRNA genes are significantly expressed in nucleus or cytoplasm
+```{r how many lncRNA and mRNA genes are sin nuc or cyto}
+# plotting lncRNA and mRNA expression in a density plot
+ggplot(promoter_features_df, aes(x = log2(tpm_homo_sapiens_hepg2 + 0.01), color = gene_type))+
+  geom_density()
+
+# saving 
+ggsave("figures/mrna_lncrna_tpm_total_rna.pdf")
+
+# re-plot, but filter for only nulcear RNAs because lncRNAs are typically nuclear
+ggplot(promoter_features_df, aes(x = log2(tpm_homo_sapiens_nuclear_fraction + 0.01), color = gene_type))+
+  geom_density()
+
+# saving figure
+ggsave("figures/mrna_lncrna_tpm_nuclear.pdf")
+```
+# Results:
+## 1. mRNAs have higher expression than lncRNAs when looking at the total RNA.
+## 2. When only looking at the nuclear fraction, mRNAs still have higher expression than lncRNAs- but the expression on lncRNAs is closer to mRNA expression.
+
+## Take home:
+### mRNAs have higher expression compared to lncRNAs (even when looking only at nuclear fraction) 
+
+# Analysis of high binding promoters (>200 DBPs) using TPM data
+```{r analysis of high binding promoters}
+# filtering super binders
+promoter_features_df <- promoter_features_df %>%
+  mutate(superbinder = promoter_features_df$number_of_dbp > 200)
+
+# setting column of superbinders
+promoter_features_df <- promoter_features_df %>% 
+  mutate(superbinder2 = ifelse(promoter_features_df$superbinder ==T, "super_binder", "not_super_binder"))
+
+# make density plot superbinder versus non superbinder expression in total RNA
+ggplot(promoter_features_df, aes(x = log2(tpm_homo_sapiens_hepg2 + 0.01), color = superbinder2))+
+  geom_density()
+
+# saving figure
+ggsave("figures/highbinder_lowbinder_tpm_total_rna.pdf")
+
+# if we zoom in on high binding promoters (> 200 DBPs) are there any that don't have any expression?
+no_expression_tpm <- filter(promoter_features_df, tpm_homo_sapiens_hepg2 == 0)
+no_exp_high_binder_tpm <- filter(no_expression_tpm, superbinder == TRUE)
+lengthnoexp_highbinder <- nrow(no_exp_high_binder_tpm)
+print(paste0("There are ", lengthnoexp_highbinder, " super binders that have no expression (TPM value of 0)."))
+
+# saving df that contains high binding promoters that have no expression as a csv 
+write.csv(no_exp_high_binder_tpm, "results\no_exp_high_binder_tpm.csv", row.names=TRUE)
+
+```
+# Results:
+## 1. The results confirm that super binders have higher expression compared to non super binders.
+## 2. There are 169 super binders that have no expression (TPM value of 0).
+## 3. In no_exp_high_binder_tpm.csv (in results folder) I have all the super binders that don't express RNA. 
+
+## Take home:
+### Super binders have higher expression compared to non super binders, however there are some (169) super binders that have no expression (TPM value of 0).
+
