@@ -1187,7 +1187,7 @@ tpm_scaled <- tpm_scaled[complete.cases(tpm_scaled),]
 new.env()
 ```
 
-    ## <environment: 0x341aeb298>
+    ## <environment: 0x181a12cf0>
 
 ``` r
 pdf("figures/heatmap_expression.pdf", height =49, width = 12)
@@ -1363,27 +1363,79 @@ ggsave("figures/highbinder_lowbinder_tpm_total_rna.pdf")
 
 ``` r
 # if we zoom in on high binding promoters (> 200 DBPs) are there any that don't have any expression?
-no_expression_tpm <- filter(promoter_features_df, tpm_homo_sapiens_hepg2 == 0)
+no_expression_tpm <- filter(promoter_features_df, tpm_homo_sapiens_hepg2 < 0.1)
 no_exp_high_binder_tpm <- filter(no_expression_tpm, superbinder == TRUE)
 lengthnoexp_highbinder <- nrow(no_exp_high_binder_tpm)
-print(paste0("There are ", lengthnoexp_highbinder, " super binders that have no expression (TPM value of 0)."))
+print(paste0("There are ", lengthnoexp_highbinder, " super binders that have little to no expression (TPM value of < 0.1)."))
 ```
 
-    ## [1] "There are 169 super binders that have no expression (TPM value of 0)."
+    ## [1] "There are 589 super binders that have little to no expression (TPM value of < 0.1)."
 
 ``` r
 # saving df that contains high binding promoters that have no expression as a csv 
 write.csv(no_exp_high_binder_tpm, "results/no_exp_high_binder_tpm.csv", row.names=TRUE)
+
+# get data in format for gene ontology database
+write.table(no_exp_high_binder_tpm$gene_name, 
+            file = "results/no_exp_high_binder_tpm.txt", 
+            col.names = FALSE, 
+            row.names = FALSE, 
+            quote = FALSE)
+
+# bar graphs from gene ontology website
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/GO_Biological_Processes.jpg")
+```
+
+<img src="figures/GO_Biological_Processes.jpg" width="708" />
+
+``` r
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/Human_Phenotype_Ontology.jpg")
+```
+
+<img src="figures/Human_Phenotype_Ontology.jpg" width="708" />
+
+``` r
+# graphs above are from reference [4]
 ```
 
 # Results:
 
 ## 1. The results confirm that super binders have higher expression compared to non super binders.
 
-## 2. There are 169 super binders that have no expression (TPM value of 0).
+## 2. There are 589 super binders that have little to no expression (TPM value of &lt; 0.1).
 
 ## 3. In no\_exp\_high\_binder\_tpm.csv (in results folder) I have all the super binders that don’t express RNA.
 
+## 4. Gene ontology biological process (2021) information for super binders with little to no transcriptional activity \[4\]:
+
+## - negative regulation of neuron differentiation (pval 0.032)
+
+## - positive regulation of behavior (pval 0.033)
+
+## - signal release from synapse (pval 0.037)
+
+## - neurotransmitter secretion (pval 0.047)
+
+## 5. Gene ontology human phenotype ontology (2021) information for super binders with little to no transcriptional activity \[4\]:
+
+## - short 1st metacarpal (pval 0.022)
+
+## - aplasia/hypoplasia of the 1st matacarpal (pval 0.022)
+
+## - abnormality of the 1st metacarpal (pval 0.027)
+
+## - panhypogammaglobulinemia (pval 0.033)
+
+## - recurrent viral infections (pval 0.044)
+
+## - short phalanx of the thumb (pval 0.047)
+
 ## Take home:
 
-### Super binders have higher expression compared to non super binders, however there are some (169) super binders that have no expression (TPM value of 0).
+### Super binders have higher expression compared to non super binders, however there are some (589) super binders that have little to no expression.
+
+### Listed/shown above are ontologies associated with super binders that have little to no expression.
+
+### Refrences:
+
+### 4. <https://maayanlab.cloud/Enrichr/>
