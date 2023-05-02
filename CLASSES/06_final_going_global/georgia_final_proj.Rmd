@@ -528,9 +528,6 @@ par(cex=0.3)
 plot(metaplot_hclust)
 dev.off()
 
-# figure for tss dendrogram
-# knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/tss_profile_dendrogram.pdf")
-
 # check and see how many clusters we have
 clusters <- cutree(metaplot_hclust, k=6)
 table(clusters)
@@ -682,25 +679,30 @@ graphics.off()
 # write_rds(mrna_metaplot_df, "results/metaplot_df_final.rds")
 
 # make metaplot for both lncrna and mrna binding profiles
-suppressWarnings({
-ggplot(combined_metaplot_profile,
-       aes(x = x, y = dens, color = gene_type )) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Promoter Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
+# suppressWarnings({
+# ggplot(combined_metaplot_profile,
+#        aes(x = x, y = dens, color = gene_type )) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Promoter Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
 #   
 # # saving
 # ggsave("figures/mega_meta_plot_lncRNA-mRNA.pdf", width = 49, height = 12)
 
 # figure for metaplot
-# knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/mega_meta_plot_lncRNA-mRNA.pdf")
+
+# First part of lncRNA vs mRNA promoter metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1mega_meta_plot_lncRNA-mRNA.png")
+
+# Second part of lncRNA vs mRNA promoter metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2mega_meta_plot_lncRNA-mRNA.png")
 ```
 # Results:
 ## 1. Most DBPs share a similar binding profile, that is centered on the TSS
@@ -750,19 +752,19 @@ non_super_binder_gr <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_id %in% 
 # write_rds(highbinder_metaplot_df, "results/highbinder_metaplot_df_final.rds")
 
 # make metaplot for high binder profiles
-suppressWarnings({
-ggplot(highbinder_metaplot_df,
-       aes(x = x, y = dens)) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("High Binder Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
+# suppressWarnings({
+# ggplot(highbinder_metaplot_df,
+#        aes(x = x, y = dens)) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("High Binder Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
   
 # saving high binder metaplot
 # ggsave("figures/highbinder_metaplot.pdf", width = 49, height = 12)
@@ -788,50 +790,58 @@ ggplot(highbinder_metaplot_df,
 # write_rds(lowbinder_metaplot_df, "results/lowbinder_metaplot_df_final.rds")
 
 # make metaplot for non super binder binder profiles
-suppressWarnings({
-ggplot(lowbinder_metaplot_df,
-       aes(x = x, y = dens)) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Low Binder Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
+# suppressWarnings({
+# ggplot(lowbinder_metaplot_df,
+#        aes(x = x, y = dens)) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Low Binder Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
   
 # saving low binder metaplot
 #ggsave("figures/lowbinder_metaplot.pdf", width = 49, height = 12)
 
-# figure for metaplot
-#knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/lowbinder_metaplot.pdf")
-
-# # adding gene_type
+# adding gene_type
 # lowbinder_metaplot_df$gene_type <- "non_super_binder"
 # highbinder_metaplot_df$gene_type <- "superbinder"
-# 
+#  
 # # making combined metaplot
 # combined_super_binder_metaplot_profile <- bind_rows(lowbinder_metaplot_df, highbinder_metaplot_df)
-# 
-ggplot(combined_super_binder_metaplot_profile,
-       aes(x = x, y = dens, color = gene_type )) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Promoter Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-# 
-# # saving combined binder metaplot
+
+# suppressWarnings({
+# ggplot(combined_super_binder_metaplot_profile,
+#        aes(x = x, y = dens, color = gene_type )) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Promoter Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
+
+# saving combined binder metaplot
 # ggsave("figures/high_and_low_binder_metaplot.pdf", width = 49, height = 12)
 
-# figure for metaplot
-#knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/high_and_low_binder_metaplot.pdf")
+# 1st part of non-super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1nonsuperbinder_metaplot.png")
+
+# 2nd part of non-super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2nonsuperbinder_metaplot.png")
+
+# 1st part of super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1superbinder_metaplot.png")
+
+# 2nd part of super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2superbinder_metaplot.png")
 ```
 # Results:
 ## 1. Super binders generally have more "broad" peaks compared to non super binders. This is most likely due to the fact that there are so many different components binding, that the range of where the DBP binds is larger. 
@@ -1047,5 +1057,5 @@ knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_202
 ### Super binders have higher expression compared to non super binders, however there are some (589) super binders that have little to no expression.
 ### Listed/shown above are ontologies associated with super binders that have little to no expression. 
 
-### Refrences: 
+### References: 
 ### 4. https://maayanlab.cloud/Enrichr/

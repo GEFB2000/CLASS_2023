@@ -734,9 +734,6 @@ dev.off()
     ##   2
 
 ``` r
-# figure for tss dendrogram
-# knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/tss_profile_dendrogram.pdf")
-
 # check and see how many clusters we have
 clusters <- cutree(metaplot_hclust, k=6)
 table(clusters)
@@ -934,39 +931,43 @@ graphics.off()
 # write_rds(mrna_metaplot_df, "results/metaplot_df_final.rds")
 
 # make metaplot for both lncrna and mrna binding profiles
-suppressWarnings({
-ggplot(combined_metaplot_profile,
-       aes(x = x, y = dens, color = gene_type )) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Promoter Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
-```
-
-![](georgia_final_proj_files/figure-gfm/metaplot%20analysis%20of%20mRNA%20and%20lncRNA%20promoters-1.png)<!-- -->
-
-``` r
+# suppressWarnings({
+# ggplot(combined_metaplot_profile,
+#        aes(x = x, y = dens, color = gene_type )) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Promoter Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
 #   
 # # saving
 # ggsave("figures/mega_meta_plot_lncRNA-mRNA.pdf", width = 49, height = 12)
 
 # figure for metaplot
-# knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/mega_meta_plot_lncRNA-mRNA.pdf")
+
+# First part of lncRNA vs mRNA promoter metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1mega_meta_plot_lncRNA-mRNA.png")
 ```
 
-# Results:
+<img src="figures/1mega_meta_plot_lncRNA-mRNA.png" width="2430" />
 
-## 1. Most DBPs share a similar binding profile, that is centered on the TSS
+``` r
+# Second part of lncRNA vs mRNA promoter metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2mega_meta_plot_lncRNA-mRNA.png")
+```
 
-## 2. Many His modifications & 2 other DBPs (H3K27ac, H3K4me1, H3K4me2, H3K79me2, H4K20me1, EZH2, H2AFZ) bind around the TSS, but not directly on the TSS
-
-## 3. H3K36me3 has bad data (we went over this in class), the metaplot is “boxy” and does not look quite right
+<img src="figures/2mega_meta_plot_lncRNA-mRNA.png" width="1900" /> \#
+Results: \#\# 1. Most DBPs share a similar binding profile, that is
+centered on the TSS \#\# 2. Many His modifications & 2 other DBPs
+(H3K27ac, H3K4me1, H3K4me2, H3K79me2, H4K20me1, EZH2, H2AFZ) bind around
+the TSS, but not directly on the TSS \#\# 3. H3K36me3 has bad data (we
+went over this in class), the metaplot is “boxy” and does not look quite
+right
 
 ## Take home:
 
@@ -1013,24 +1014,20 @@ non_super_binder_gr <- lncrna_mrna_promoters[lncrna_mrna_promoters$gene_id %in% 
 # write_rds(highbinder_metaplot_df, "results/highbinder_metaplot_df_final.rds")
 
 # make metaplot for high binder profiles
-suppressWarnings({
-ggplot(highbinder_metaplot_df,
-       aes(x = x, y = dens)) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("High Binder Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
-```
-
-![](georgia_final_proj_files/figure-gfm/metaplot%20analysis%20of%20DBPs%20on%20superbinders%20vs%20regular%20promoters-1.png)<!-- -->
-
-``` r
+# suppressWarnings({
+# ggplot(highbinder_metaplot_df,
+#        aes(x = x, y = dens)) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("High Binder Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
+  
 # saving high binder metaplot
 # ggsave("figures/highbinder_metaplot.pdf", width = 49, height = 12)
 
@@ -1055,68 +1052,79 @@ ggplot(highbinder_metaplot_df,
 # write_rds(lowbinder_metaplot_df, "results/lowbinder_metaplot_df_final.rds")
 
 # make metaplot for non super binder binder profiles
-suppressWarnings({
-ggplot(lowbinder_metaplot_df,
-       aes(x = x, y = dens)) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Low Binder Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-})
-```
-
-![](georgia_final_proj_files/figure-gfm/metaplot%20analysis%20of%20DBPs%20on%20superbinders%20vs%20regular%20promoters-2.png)<!-- -->
-
-``` r
+# suppressWarnings({
+# ggplot(lowbinder_metaplot_df,
+#        aes(x = x, y = dens)) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Low Binder Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
+  
 # saving low binder metaplot
 #ggsave("figures/lowbinder_metaplot.pdf", width = 49, height = 12)
 
-# figure for metaplot
-#knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/lowbinder_metaplot.pdf")
-
-# # adding gene_type
+# adding gene_type
 # lowbinder_metaplot_df$gene_type <- "non_super_binder"
 # highbinder_metaplot_df$gene_type <- "superbinder"
-# 
+#  
 # # making combined metaplot
 # combined_super_binder_metaplot_profile <- bind_rows(lowbinder_metaplot_df, highbinder_metaplot_df)
-# 
-ggplot(combined_super_binder_metaplot_profile,
-       aes(x = x, y = dens, color = gene_type )) +
-  geom_vline(xintercept = 0, lty = 2) +
-  geom_line(size = 1.5) +
-  facet_wrap(dbp ~ ., scales = "free_y") +
-  ggtitle("Promoter Metaplot") +
-  scale_x_continuous(breaks = c(-1000, 0, 1000),
-                     labels = c("-1kb", "TSS", "+1kb"),
-                     name = "") +
-  ylab("Peak frequency") +
- scale_color_manual(values = c("#424242","#a8404c"))
-```
 
-![](georgia_final_proj_files/figure-gfm/metaplot%20analysis%20of%20DBPs%20on%20superbinders%20vs%20regular%20promoters-3.png)<!-- -->
+# suppressWarnings({
+# ggplot(combined_super_binder_metaplot_profile,
+#        aes(x = x, y = dens, color = gene_type )) +
+#   geom_vline(xintercept = 0, lty = 2) +
+#   geom_line(size = 1.5) +
+#   facet_wrap(dbp ~ ., scales = "free_y") +
+#   ggtitle("Promoter Metaplot") +
+#   scale_x_continuous(breaks = c(-1000, 0, 1000),
+#                      labels = c("-1kb", "TSS", "+1kb"),
+#                      name = "") +
+#   ylab("Peak frequency") +
+#  scale_color_manual(values = c("#424242","#a8404c"))
+# })
 
-``` r
-# 
-# # saving combined binder metaplot
+# saving combined binder metaplot
 # ggsave("figures/high_and_low_binder_metaplot.pdf", width = 49, height = 12)
 
-# figure for metaplot
-#knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/high_and_low_binder_metaplot.pdf")
+# 1st part of non-super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1nonsuperbinder_metaplot.png")
 ```
 
-# Results:
+<img src="figures/1nonsuperbinder_metaplot.png" width="2490" />
 
-## 1. Super binders generally have more “broad” peaks compared to non super binders. This is most likely due to the fact that there are so many different components binding, that the range of where the DBP binds is larger.
+``` r
+# 2nd part of non-super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2nonsuperbinder_metaplot.png")
+```
 
-## 2. Additionally, super binders and non super binders generally bind in the same positions along the transcription start site.
+<img src="figures/2nonsuperbinder_metaplot.png" width="1842" />
 
-### Note\*\*\* H3K36me3 has bad data as stated previously
+``` r
+# 1st part of super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/1superbinder_metaplot.png")
+```
+
+<img src="figures/1superbinder_metaplot.png" width="2486" />
+
+``` r
+# 2nd part of super binder metaplot
+knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_2023/CLASSES/06_final_going_global/figures/2superbinder_metaplot.png")
+```
+
+<img src="figures/2superbinder_metaplot.png" width="1842" /> \# Results:
+\#\# 1. Super binders generally have more “broad” peaks compared to non
+super binders. This is most likely due to the fact that there are so
+many different components binding, that the range of where the DBP binds
+is larger. \#\# 2. Additionally, super binders and non super binders
+generally bind in the same positions along the transcription start site.
+\#\#\# Note\*\*\* H3K36me3 has bad data as stated previously
 
 # 5. RNAseq expression
 
@@ -1187,7 +1195,7 @@ tpm_scaled <- tpm_scaled[complete.cases(tpm_scaled),]
 new.env()
 ```
 
-    ## <environment: 0x181a12cf0>
+    ## <environment: 0xf20323f8>
 
 ``` r
 pdf("figures/heatmap_expression.pdf", height =49, width = 12)
@@ -1436,6 +1444,6 @@ knitr::include_graphics("/scratch/Shares/rinnclass/CLASS_2023/geba9152/CLASS_202
 
 ### Listed/shown above are ontologies associated with super binders that have little to no expression.
 
-### Refrences:
+### References:
 
 ### 4. <https://maayanlab.cloud/Enrichr/>
